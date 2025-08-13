@@ -1,3 +1,5 @@
 numpy
 matplotlib
 ipympl
+jupyterlab
+jupyterlab_widgets
