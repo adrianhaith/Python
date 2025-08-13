@@ -2,16 +2,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from agent import PGLearner
+from agent import PGLearnerSimple, PGLearner
 from toy_env import Toy2DEnv
 from plotting import plot_toy2d_reward_landscape
 
 # Set random number seed
-np.random.seed(1)
+np.random.seed(2)
 
 # --- Initialize environment and learner ---
 env = Toy2DEnv()
-learner = PGLearner(init_mean=[0.5, 0.4], init_std=[0.08, 0.04], alpha=1, alpha_phi=0.0, alpha_nu=0.0)
+learner = PGLearnerSimple(init_mean=[0.4, 0.5], init_std=[0.1, 0.05], alpha_mu=0.001, alpha_nu=0.01, alpha_phi=0.0)
 learner.initialize_rwd_baseline(env)
 
 # visualize the reward landscape and initial policy
@@ -23,7 +23,7 @@ plt.show()
 # %%
 # --- Run a few trials ---
 
-n_trials = 5
+n_trials = 5000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus     = np.zeros((n_trials,2))
@@ -39,7 +39,6 @@ for trial in range(n_trials):
 
 
     action = learner.select_action()
-    action = [.2, 0.6]
     _, reward, _, _ = env.step(action)
     learner.update(action, reward)
 

@@ -11,8 +11,8 @@ import numpy as np
     
 # agent model - defines the policy and learning rules
 class PGLearner:
-    def __init__(self, init_mean=None, init_std=None, alpha=0.01, alpha_nu=0.01, alpha_phi=0.01, rwd_baseline_decay=0.99):
-        self.alpha = alpha
+    def __init__(self, init_mean=None, init_std=None, alpha_mu=0.01, alpha_nu=0.01, alpha_phi=0.01, rwd_baseline_decay=0.99):
+        self.alpha_mu = alpha_mu
         self.alpha_nu = alpha_nu
         self.alpha_phi = alpha_phi
 
@@ -74,7 +74,7 @@ class PGLearner:
         # --- Mean update (in normalized space) ---
         cov = self._covariance_norm()
         grad_logp_mu = np.linalg.inv(cov) @ (delta_norm - self.mu_norm)
-        self.mu_norm += self.alpha * (reward - self.rwd_baseline) * grad_logp_mu
+        self.mu_norm += self.alpha_mu * (reward - self.rwd_baseline) * grad_logp_mu
 
         # --- ν update ---
         z = self.Q.T @ (delta_norm - self.mu_norm)
@@ -105,7 +105,7 @@ class PGLearner:
     @property
     def cov(self):
         covariance_norm = self._covariance_norm()
-        scaling = np.array([[self.init_std[0],0], [0, self.init_std[1]]])
+        scaling = np.array([[self.init_std[0]**2,0], [0, self.init_std[1]**2]])
         return scaling * covariance_norm
 
 
@@ -113,8 +113,8 @@ class PGLearner:
 
 # define a simple version of the PGLearner class that neglects the normalization
 class PGLearnerSimple:
-    def __init__(self, init_mean=None, init_std=None, alpha=0.01, alpha_nu=0.01, alpha_phi=0.01, rwd_baseline_decay=0.99):
-        self.alpha = alpha
+    def __init__(self, init_mean=None, init_std=None, alpha_mu=0.01, alpha_nu=0.01, alpha_phi=0.01, rwd_baseline_decay=0.99):
+        self.alpha_mu = alpha_mu
         self.alpha_nu = alpha_nu
         self.alpha_phi = alpha_phi
 
@@ -129,7 +129,7 @@ class PGLearnerSimple:
 
         # Learnable parameters (in normalized space)
         self.mu = init_mean                   # policy mean
-        self.nu = np.log(init_std)            # log-eigenvalues of policy covariance matrix
+        self.nu = np.log([init_std[0]**2, init_std[1]**2])            # log-eigenvalues of policy covariance matrix
         self.phi = 0.0                        # orientation parameter for covariance matrix
         self.Q = self._rotation_matrix(self.phi)
 
@@ -164,7 +164,7 @@ class PGLearnerSimple:
     def update(self, action, reward):
         cov = self._covariance()
         grad_logp_mu = np.linalg.inv(cov) @ (action - self.mu)
-        self.mu += self.alpha * (reward - self.rwd_baseline) * grad_logp_mu
+        self.mu += self.alpha_mu * (reward - self.rwd_baseline) * grad_logp_mu
 
         # --- ν update ---
         z = self.Q.T @ (action - self.mu)

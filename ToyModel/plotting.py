@@ -49,6 +49,7 @@ def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
     eigvals, eigvecs = eigvals[order], eigvecs[:, order]
 
     angle = np.degrees(np.arctan2(*eigvecs[:, 0][::-1]))
-    width, height = 2 * n_std * np.sqrt(eigvals)
+    chisq_val = 5.991  # from chi^2 with 2 degrees of freedom - appropriate for plotting a 95% confidence interval for the covariance ellipse
+    width, height = 2 * np.sqrt(chisq_val * eigvals)
     ellipse = Ellipse(xy=mean, width=width, height=height, angle=angle, fill=False, **kwargs)
     ax.add_patch(ellipse)

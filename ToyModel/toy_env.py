@@ -12,7 +12,7 @@ class Toy2DEnv:
         # return np.exp(-20 * (u2 - (0.7 - u1)**2))
         # return 2*np.exp(-10*(u2 - (0.9 - (u1 - 1)**2))**2)-.95
         y_valley = -1*(u1-0.3)*(u1-1.4)
-        return np.exp(-2*(u1-.7)**2)*np.exp(-10*(u2-y_valley)**2)
+        return np.exp(-2*(u1-.7)**2)*np.exp(-40*(u2-y_valley)**2)
     
 
     def reset(self):
