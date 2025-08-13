@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
 from toy_env import Toy2DEnv
-from agent import PGLearner
+from agent import PGLearnerSimple
 
 # --- Helper for plotting ---
 def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
@@ -15,12 +15,11 @@ def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
     width, height = 2 * n_std * np.sqrt(eigvals)
     ellipse = Ellipse(xy=mean, width=width, height=height, angle=angle, fill=False, **kwargs)
     ax.add_patch(ellipse)
-    ax.scatter(mean[0],mean[1], color='white', s=20)
     return ellipse
 
 # --- Setup ---
 env = Toy2DEnv()
-learner = PGLearner(init_mean=[0.5, 0.4], init_std=[0.08, 0.04], alpha=0.5, alpha_nu=0.5, rwd_baseline_decay=0.9)
+learner = PGLearnerSimple(init_mean=[0.5, 0.4], init_std=[0.04, 0.02], alpha=0.05, alpha_nu=0.0, rwd_baseline_decay=0.9)
 learner.initialize_rwd_baseline(env)
 actions = []
 
@@ -37,18 +36,27 @@ ax_main.set_xlabel('u1')
 ax_main.set_ylabel('u2')
 ax_main.set_title('Click to select actions and update policy')
 scatter = ax_main.scatter([], [], color='red', s=20, label='Selected actions')
+cov = learner.cov
+print(cov)
 
+# %%
 # Initial ellipse
 ellipse = [plot_covariance_ellipse(learner.mean, learner.cov, ax_main, edgecolor='white', lw=2)]
+
 ax_main.legend()
 ax_main.set_aspect('equal')
+
+# policy mean
+mean_dot = ax_main.plot(
+    [learner.mean[0]], [learner.mean[1]], 'w.', markersize=10
+)
 
 # --- Reward baseline colorbar ---
 norm = plt.Normalize(vmin=R.min(), vmax=R.max())
 cbar = plt.colorbar(heatmap, cax=ax_cbar)
 cbar.set_label("Reward")
 
-# NEW: Add reward baseline marker
+# --- Add reward baseline marker
 rwd_dot = ax_cbar.plot(
     [0.5], [learner.rwd_baseline], 'ro', markersize=8, markeredgecolor='black'
 )[0]
@@ -80,9 +88,12 @@ def onclick(event):
     # Update scatter
     scatter.set_offsets(actions)
 
-    # Update ellipse
+    # Update ellipse and mean dot
     ellipse[0].remove()
     ellipse[0] = plot_covariance_ellipse(learner.mean, learner.cov, ax_main, edgecolor='white', lw=2)
+
+    mean_dot[0].set_xdata([learner.mean[0]])
+    mean_dot[0].set_ydata([learner.mean[1]])
 
     # Update reward dot on color bar
     rwd_dot.set_ydata([learner.rwd_baseline])
