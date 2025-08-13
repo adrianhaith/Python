@@ -73,6 +73,5 @@ class TrajLearner:
         grad_logp_nu = -.5 +.5*(delta **2) * np.exp(-self.nu) 
         self.nu += self.alpha_nu * grad_logp_nu.ravel() * (reward - self.rwd_baseline)
         
-
     def get_policy_mean(self):
         return self.mean.reshape((2, self.Ng))
