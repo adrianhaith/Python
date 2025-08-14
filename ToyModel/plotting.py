@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
-def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300, ax=None):
+def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300, ax=None, RPE=False):
     """
     Plots the reward heatmap for the Toy2DEnv.
     
@@ -18,8 +18,17 @@ def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300,
 
     # Reward grid
     U1, U2, R = env.get_reward_grid(resolution=resolution)
-    #heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap='viridis', alpha=0.9)
-    heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap='cividis', alpha=0.9)
+    if RPE and learner is not None:
+        R = R - learner.rwd_baseline
+
+    if RPE:
+        cmap = 'RdBu' # or 'coolwarm', 'RdBu'
+        vlim = np.abs(R).max()
+        heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap=cmap, vmin=-vlim, vmax=vlim)
+    else:
+        cmap = 'cividis'
+        heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap=cmap, alpha=0.9)
+
     ax.set_xlim(env.u1_range)
     ax.set_ylim(env.u2_range)
     ax.set_xlabel('u1')
