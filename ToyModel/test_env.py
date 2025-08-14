@@ -11,7 +11,7 @@ np.random.seed(2)
 
 # --- Initialize environment and learner ---
 env = Toy2DEnv()
-learner = PGLearnerSimple(init_mean=[0.4, 0.5], init_std=[0.1, 0.05], alpha_mu=0.001, alpha_nu=0.01, alpha_phi=0.01)
+learner = PGLearnerSimple(init_mean=[0.4, 0.5], init_std=[0.08, 0.04], alpha_mu=0.0025, alpha_nu=0.0025, alpha_phi=0.0025, rwd_baseline_decay=0.9)
 learner.initialize_rwd_baseline(env)
 
 # visualize the reward landscape and initial policy
@@ -23,7 +23,7 @@ plt.show()
 # %%
 # --- Run a few trials ---
 
-n_trials = 5000
+n_trials = 3000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus     = np.zeros((n_trials,2))

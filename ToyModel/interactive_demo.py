@@ -21,7 +21,7 @@ def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
 
 # --- Setup ---
 env = Toy2DEnv()
-learner = PGLearnerSimple(init_mean=[0.5, 0.4], init_std=[0.06, 0.03], alpha_mu=0.005, alpha_nu=0.0, alpha_phi=0.0, rwd_baseline_decay=0.9)
+learner = PGLearnerSimple(init_mean=[0.2, 0.2], init_std=[0.06, 0.03], alpha_mu=0.005, alpha_nu=0.02, alpha_phi=0.02, rwd_baseline_decay=0.9)
 learner.initialize_rwd_baseline(env)
 actions = []
 #action = learner.select_action()

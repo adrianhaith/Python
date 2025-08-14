@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse
 
-def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300, ax=None, RPE=False):
+def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300, ax=None, RPE=False, policycolor='yellow',outline=False):
     """
     Plots the reward heatmap for the Toy2DEnv.
     
@@ -22,11 +22,12 @@ def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300,
         R = R - learner.rwd_baseline
 
     if RPE:
-        cmap = 'RdBu' # or 'coolwarm', 'RdBu'
+        #cmap = 'RdBu' # or 'coolwarm', 'RdBu'
+        cmap = 'coolwarm'
         vlim = np.abs(R).max()
         heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap=cmap, vmin=-vlim, vmax=vlim)
     else:
-        cmap = 'cividis'
+        cmap = 'gray' #'Greens' #'YlGn'
         heatmap = ax.pcolormesh(U1, U2, R, shading='auto', cmap=cmap, alpha=0.9)
 
     ax.set_xlim(env.u1_range)
@@ -38,20 +39,27 @@ def plot_toy2d_reward_landscape(env, learner=None, actions=None, resolution=300,
     # Sampled actions
     if actions:
         actions = np.array(actions)
-        ax.scatter(actions[:, 0], actions[:, 1], color='red', s=10, label='Sampled Actions')
+        if outline:
+            ax.scatter(actions[:, 0], actions[:, 1], marker='o', color=policycolor, edgecolor='black', s=20, label='Sampled Actions', alpha=0.6)
+        else:
+            ax.scatter(actions[:, 0], actions[:, 1], marker='o', color=policycolor, s=20, label='Sampled Actions')
 
     # Policy mean + covariance ellipse
     if learner is not None:
         mu = learner.mean
         cov = learner.cov
-        plot_covariance_ellipse(mu, cov, ax, edgecolor='white', lw=2)
-        ax.scatter(mu[0],mu[1], color='white', s=20)
+        plot_covariance_ellipse(mu, cov, ax, color=policycolor, outline=outline)
+        if outline:
+            ax.plot(mu[0], mu[1], 'kx', markersize=10, alpha=0.6,markeredgewidth=3)
+        ax.plot(mu[0], mu[1], marker='x', markersize=8, color=policycolor, markeredgewidth=1)
+        
+        
 
     ax.set_aspect('equal')
     ax.legend()
     return ax
 
-def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
+def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, color='yellow',outline=False):
     """Plot an ellipse representing the covariance matrix."""
     eigvals, eigvecs = np.linalg.eigh(cov)
     order = np.argsort(eigvals)[::-1]
@@ -60,5 +68,8 @@ def plot_covariance_ellipse(mean, cov, ax, n_std=1.0, **kwargs):
     angle = np.degrees(np.arctan2(*eigvecs[:, 0][::-1]))
     chisq_val = 5.991  # from chi^2 with 2 degrees of freedom - appropriate for plotting a 95% confidence interval for the covariance ellipse
     width, height = 2 * np.sqrt(chisq_val * eigvals)
-    ellipse = Ellipse(xy=mean, width=width, height=height, angle=angle, fill=False, **kwargs)
-    ax.add_patch(ellipse)
+    if outline:
+        ellipse = Ellipse(xy=mean, width=width, height=height, angle=angle, fill=False, edgecolor='black', linewidth=4, alpha=0.6)
+        ax.add_patch(ellipse)
+    ellipse2 = Ellipse(xy=mean, width=width, height=height, angle=angle, fill=False, edgecolor=color, linewidth=2)
+    ax.add_patch(ellipse2)

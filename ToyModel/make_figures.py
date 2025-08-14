@@ -12,13 +12,15 @@ np.random.seed(2)
 
 # --- Initialize environment and learner ---
 env = Toy2DEnv()
-learner = PGLearnerSimple(init_mean=[0.5, 0.4], init_std=[0.1, 0.05], alpha_mu=0.001, alpha_nu=0.01, alpha_phi=0.01)
+learner = PGLearnerSimple(init_mean=[0.4, 0.4], init_std=[0.08, 0.04], alpha_mu=0.001, alpha_nu=0.01, alpha_phi=0.01)
 learner.initialize_rwd_baseline(env)
 
 # visualize the reward landscape and initial policy
-sampled_actions = [learner.select_action() for _ in range(50)]
-plot_toy2d_reward_landscape(env, learner=learner, actions=sampled_actions)
+sampled_actions = [learner.select_action() for _ in range(40)]
+policycolor = 'yellow'
+plot_toy2d_reward_landscape(env, learner=learner, actions=sampled_actions, policycolor=policycolor,outline=True)
+#plot_toy2d_reward_landscape(env, learner=learner, policycolor=policycolor,outline=True)
 plt.show()
 
-plot_toy2d_reward_landscape(env, learner=learner, actions=sampled_actions, RPE=True)
+plot_toy2d_reward_landscape(env, learner=learner, actions=sampled_actions, RPE=True, policycolor=policycolor,outline=True)
 plt.show()
