@@ -1,5 +1,4 @@
 import numpy as np
-import
 
 class Toy2DEnv:
     def __init__(self):

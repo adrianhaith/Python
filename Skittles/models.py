@@ -204,3 +204,15 @@ class SkittlesLearner:
 
         # --- Update the reward baseline
         self.rwd_baseline = self.rwd_baseline_decay * self.rwd_baseline + (1 - self.rwd_baseline_decay) * reward
+
+    # attribute to access the un-normalized mean
+    @property
+    def mu(self):
+        return self._from_normalized(self.mu_norm)
+    
+    # attribute to access the un-normalized covariance matrix
+    @property
+    def covariance(self):
+        cov_norm = self._covariance_norm()
+        scaling_mat = np.diag(self.init_std)
+        return scaling_mat * cov_norm * scaling_mat

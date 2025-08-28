@@ -13,8 +13,13 @@ Created on Sun Jul  6 16:54:38 2025
 # %% Imports
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+from plotting import plot_policy_snapshot
 
 from models import SkittlesEnv, SkittlesLearner
+
+make_animation = False
 
 # %% Simulate learning
 
@@ -22,8 +27,8 @@ from models import SkittlesEnv, SkittlesLearner
 np.random.seed(4)
 
 participant = SkittlesLearner(
-    init_mean=[190, 2],
-    init_std=[10, .5],
+    init_mean=[250, 6],
+    init_std=[8, .6],
     alpha=0.05,
     alpha_nu=0.05,
     alpha_phi=0.05,
@@ -36,8 +41,10 @@ print(np.exp(participant.nu))
 n_trials = 6000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
+mus = np.zeros((n_trials, 2))
 nus     = np.zeros((n_trials, 2))   # <-- store log‐eigs
 phis    = np.zeros(n_trials) 
+cov_mats = np.zeros((n_trials, 2, 2))
 rwd_baselines = np.zeros(n_trials)
 
 participant.initialize_rwd_baseline(env)
@@ -54,9 +61,10 @@ for t in range(n_trials):
     
     actions[t] = a
     rewards[t] = r
+    mus[t]     = participant.mu
     nus[t]     = participant.nu   # <-- copy current ν
     phis[t]    = participant.phi
-    
+    cov_mats[t] = participant.covariance
 
 # %% plot outcome of simulations
 bin_size = 10
@@ -131,84 +139,90 @@ plt.legend()
 plt.grid(True)
 plt.tight_layout()
 
-# # %% ---Create animation showing learning evolving over time
-# from matplotlib.animation import FuncAnimation
-# from IPython.display import HTML, display
-
-# # --- Animation setup ---
-# frame_size = 100
-# step_size = 20
-# n_frames = (n_trials - frame_size) // step_size + 1
-
-# fig, ax = plt.subplots(figsize=(6, 6))
-# c = ax.pcolormesh(A_deg, V, R, shading='auto', cmap='gray', alpha=0.9)
-
-# # Set fixed limits
-# ax.set_xlim(A_deg.min(), A_deg.max())
-# ax.set_ylim(V.min(),V.max())
-# ax.set_xlabel("Launch Angle (degrees)")
-# ax.set_ylabel("Velocity (m/s)")
-# ax.set_title("Learning Trajectory")
-
-# # Initialize scatter plot
-# sc = ax.scatter([], [], color='red', s=10)
-
-# # --- Animation update function ---
-# def update(frame):
-#     start = frame * step_size
-#     end = start + frame_size
-#     batch = actions_deg[start:end]
-#     sc.set_offsets(batch)
-#     ax.set_title(f"Trials {start+1}–{end}")
-    
-#     return sc,
-
-# print("making animation...")
-# ani = FuncAnimation(fig, update, frames=n_frames, interval=50 , blit=False)
-
-# plt.tight_layout()
-# #display(HTML(ani.to_jshtml()))
-
-# # Save to MP4
-# ani.save("learning_animation.mp4", fps=24)
-# #from IPython.display import Video
-# #Video("learning_animation.mp4")
-# print("done")
-
 # %%
-from matplotlib.animation import FuncAnimation
-from IPython.display import HTML, display
-import numpy as np
+if(make_animation):
+    from matplotlib.animation import FuncAnimation
+    from IPython.display import HTML, display
+    import numpy as np
 
-# --- Animation setup ---
-frame_size = 100
-step_size = 20
-n_frames = (n_trials - frame_size) // step_size + 1
+    # --- Animation setup ---
+    frame_size = 100
+    step_size = 20
+    n_frames = (n_trials - frame_size) // step_size + 1
 
-fig, ax = plt.subplots(figsize=(6, 6))
-c = ax.pcolormesh(A_deg, V, R, shading='auto', cmap='gray', alpha=0.9)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    c = ax.pcolormesh(A_deg, V, R, shading='auto', cmap='gray', alpha=0.9)
 
+    ax.set_xlim(A_deg.min(), A_deg.max())
+    ax.set_ylim(V.min(), V.max())
+    ax.set_xlabel("Launch Angle (degrees)")
+    ax.set_ylabel("Velocity (m/s)")
+    ax.set_title("Learning Trajectory")
+
+    sc = ax.scatter([], [], color='red', s=10, zorder=3)
+
+    def update(frame):
+        start = frame * step_size
+        end = start + frame_size
+        batch = actions_deg[start:end]
+        sc.set_offsets(np.atleast_2d(batch))
+        ax.set_title(f"Trials {start+1}–{end}")
+        return sc,
+
+    print("making animation...")
+    ani = FuncAnimation(fig, update, frames=n_frames, interval=25, blit=False)
+
+    plt.tight_layout()
+    plt.close(fig)
+    display(HTML(ani.to_jshtml()))
+    print("done")
+
+
+
+
+# %% ---- Plot evolution of training in a single panel ---------------------------
+# -------------------------------
+
+
+from matplotlib.cm import ScalarMappable
+from matplotlib.colors import Normalize
+
+
+# Color map setup
+cmap = plt.cm.YlGn  # or 'plasma', 'inferno', etc.
+norm = Normalize(vmin=0, vmax=n_trials)  # normalize trial index for colormap
+
+
+fig, ax = plt.subplots(figsize=(10, 10))
+
+ax.pcolormesh(A_deg, V, R, shading='auto', cmap='gray', alpha=0.9)
+
+snapshot_step_size = 2000
+
+#snapshot_trials = np.arange(snapshot_step_size-1, n_trials+1, snapshot_step_size)
+snapshot_trials = np.array([0, 999, 1999, 3999, 5999])
+snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
+
+colors = [cmap(norm(t)) for t in snapshot_trials] # color to use for each snapshot
+
+for trial, color in zip(snapshot_trials, colors):
+    mu = mus[trial]
+    nu = nus[trial]
+    phi = phis[trial]
+    cov = cov_mats[trial]
+    plot_policy_snapshot(ax, mu, cov, color)
+
+# Formatting
 ax.set_xlim(A_deg.min(), A_deg.max())
 ax.set_ylim(V.min(), V.max())
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
-ax.set_title("Learning Trajectory")
+ax.set_title("Policy Evolution Across Learning")
 
-sc = ax.scatter([], [], color='red', s=10, zorder=3)
-
-def update(frame):
-    start = frame * step_size
-    end = start + frame_size
-    batch = actions_deg[start:end]
-    sc.set_offsets(np.atleast_2d(batch))
-    ax.set_title(f"Trials {start+1}–{end}")
-    return sc,
-
-print("making animation...")
-ani = FuncAnimation(fig, update, frames=n_frames, interval=25, blit=False)
+sm = ScalarMappable(cmap=cmap, norm=norm)
+sm.set_array([])
+#cbar = plt.colorbar(sm, ax=ax, label="Training Progress (Trials)")
 
 plt.tight_layout()
-plt.close(fig)
-display(HTML(ani.to_jshtml()))
-print("done")
+plt.show()
 # %%
