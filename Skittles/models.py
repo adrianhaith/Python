@@ -80,7 +80,7 @@ class SkittlesEnv(gym.Env):
 
         return np.array([0.0], dtype=np.float32), reward, True, False, info
     
-    def compute_reward_grid(self, angle_range=None, velocity_range=None, resolution=100, return_degrees=False):
+    def compute_reward_grid(self, angle_range=None, velocity_range=None, resolution=300, return_degrees=False):
         """
         Computes a reward heatmap over the environment's action space.
     
@@ -215,4 +215,4 @@ class SkittlesLearner:
     def covariance(self):
         cov_norm = self._covariance_norm()
         scaling_mat = np.diag(self.init_std)
-        return scaling_mat * cov_norm * scaling_mat
+        return scaling_mat @ cov_norm @ scaling_mat

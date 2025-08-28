@@ -24,11 +24,11 @@ make_animation = False
 # %% Simulate learning
 
 # Set random number seed
-np.random.seed(4)
+np.random.seed(7)
 
 participant = SkittlesLearner(
-    init_mean=[250, 6],
-    init_std=[8, .6],
+    init_mean=[210, 2],
+    init_std=[10, .75],
     alpha=0.05,
     alpha_nu=0.05,
     alpha_phi=0.05,
@@ -38,7 +38,7 @@ env = SkittlesEnv()
 
 print(np.exp(participant.nu))
 
-n_trials = 6000
+n_trials = 8000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus = np.zeros((n_trials, 2))
@@ -65,6 +65,9 @@ for t in range(n_trials):
     nus[t]     = participant.nu   # <-- copy current ν
     phis[t]    = participant.phi
     cov_mats[t] = participant.covariance
+
+
+participant.covariance
 
 # %% plot outcome of simulations
 bin_size = 10
@@ -122,6 +125,42 @@ actions_deg[:, 0] = np.rad2deg(actions[:, 0])
 # Split actions
 first_100 = actions_deg[:100]
 last_100 = actions_deg[-100:]
+
+# %%---Log-log plot to test for power-law learning
+from scipy.stats import linregress
+
+# --- Parameters ---
+bin_size = 100
+n_bins = n_trials // bin_size
+trial_bins = np.arange(1, n_trials + 1, bin_size)
+
+# --- Bin and average rewards ---
+reward_binned = -np.mean(rewards[:n_bins * bin_size].reshape(n_bins, bin_size), axis=1)
+
+# Avoid issues with log(0) by shifting rewards if needed
+eps = 1e-6
+reward_binned = np.maximum(reward_binned, eps)
+
+# --- Log-log transform + omit first bin
+log_trials = np.log10(trial_bins[1:])
+log_rewards = np.log10(reward_binned[1:])
+
+# --- Optional: Linear regression in log-log space ---
+slope, intercept, r_value, p_value, std_err = linregress(log_trials, log_rewards)
+fit_line = slope * log_trials + intercept
+
+# --- Plot ---
+plt.figure(figsize=(6, 4))
+plt.plot(log_trials, log_rewards, 'o-', label='Log-Log Data')
+plt.plot(log_trials, fit_line, 'r--', label=f'Fit: slope={slope:.2f}')
+plt.xlabel("log₁₀(Trial)")
+plt.ylabel("log₁₀(Reward)")
+plt.title("Log-Log Plot of Learning Curve")
+plt.legend()
+plt.grid(True)
+plt.tight_layout()
+plt.show()
+
 
 # %%---Plot heatmap with two sets of actions
 A_deg, V, R = env.compute_reward_grid(return_degrees = True)
@@ -185,22 +224,21 @@ if(make_animation):
 
 
 from matplotlib.cm import ScalarMappable
-from matplotlib.colors import Normalize
-
+from matplotlib.colors import Normalize, PowerNorm
 
 # Color map setup
-cmap = plt.cm.YlGn  # or 'plasma', 'inferno', etc.
+cmap = plt.cm.winter_r  # or 'plasma', 'inferno', etc.
 norm = Normalize(vmin=0, vmax=n_trials)  # normalize trial index for colormap
 
 
-fig, ax = plt.subplots(figsize=(10, 10))
+fig, ax = plt.subplots(figsize=(6, 6))
 
-ax.pcolormesh(A_deg, V, R, shading='auto', cmap='gray', alpha=0.9)
+ax.pcolormesh(A_deg, V, R, cmap='Greys_r', alpha=0.9, norm=PowerNorm(gamma=3))
 
 snapshot_step_size = 2000
 
 #snapshot_trials = np.arange(snapshot_step_size-1, n_trials+1, snapshot_step_size)
-snapshot_trials = np.array([0, 999, 1999, 3999, 5999])
+snapshot_trials = np.array([0, 499, 999, 1999, 3999, 7999])
 snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
 
 colors = [cmap(norm(t)) for t in snapshot_trials] # color to use for each snapshot
@@ -213,8 +251,8 @@ for trial, color in zip(snapshot_trials, colors):
     plot_policy_snapshot(ax, mu, cov, color)
 
 # Formatting
-ax.set_xlim(A_deg.min(), A_deg.max())
-ax.set_ylim(V.min(), V.max())
+ax.set_xlim(A_deg.min(), 320)
+ax.set_ylim(V.min(), 6)
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
 ax.set_title("Policy Evolution Across Learning")

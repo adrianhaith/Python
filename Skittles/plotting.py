@@ -23,10 +23,13 @@ def plot_policy_snapshot(ax, mu, cov, color, n_samples=25, show_ellipse=True, la
     ax.scatter(samples[:, 0], samples[:, 1], s=10, color=color, label=label)
 
     if show_ellipse:
-        vals, vecs = np.linalg.eigh(cov)
-        angle = np.degrees(np.arctan2(vecs[1, 0], vecs[0, 0]))
+        eigvals, eigvecs = np.linalg.eigh(cov)
+        order = np.argsort(eigvals)[::-1]
+        eigvals, eigvecs = eigvals[order], eigvecs[:, order]
+
+        angle = np.degrees(np.arctan2(*eigvecs[:, 0][::-1]))
         chisq_val = 5.991  # from chi^2 with 2 degrees of freedom - appropriate for plotting a 95% confidence interval for the covariance ellipse
-        width, height = 2 * np.sqrt(chisq_val * vals)
+        width, height = 2 * np.sqrt(chisq_val * eigvals)
         ellipse = Ellipse(mu, width, height, angle=angle, edgecolor=color,
                           facecolor='none', lw=1)
         ax.add_patch(ellipse)
