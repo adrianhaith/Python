@@ -26,10 +26,10 @@ make_animation = False
 # %% Simulate learning
 
 # Set random number seed
-np.random.seed(7)
+np.random.seed(2)
 
 participant = SkittlesLearner(
-    init_mean=[210, 2],
+    init_mean=[110, 2],
     init_std=[10, .75],
     alpha=0.05,
     alpha_nu=0.05,
@@ -38,8 +38,7 @@ participant = SkittlesLearner(
 )
 env = SkittlesEnv()
 
-ax, out = env.plot_sample_trajectories(n_samples=1, seed=5)
-plt.savefig("skittles_top_down.svg", format="svg", bbox_inches='tight')
+ax, out = env.plot_sample_trajectories(n_samples=1)
 
 n_trials = 8000
 actions = np.zeros((n_trials, 2))
@@ -254,7 +253,7 @@ for trial, color in zip(snapshot_trials, colors):
     plot_policy_snapshot(ax, mu, cov, color)
 
 # Formatting
-ax.set_xlim(A_deg.min(), 310)
+ax.set_xlim(A_deg.min(), 150)
 ax.set_ylim(V.min(), 5.5)
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")

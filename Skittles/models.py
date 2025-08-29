@@ -21,14 +21,14 @@ class SkittlesEnv(gym.Env):
         self.m = 0.1     # mass
         self.l = 0.2     # paddle length
         self.xp = 0.0    # paddle pivot x
-        self.yp = -1.5   # paddle pivot y
+        self.yp = -1   # paddle pivot y
 
-        self.target = np.array([0.8, 0.8], dtype=np.float32)
+        self.target = np.array([0.75, .75], dtype=np.float32)
 
         # Action: [angle (rad), velocity (m/s)]
         self.action_space = spaces.Box(
-        low=np.array([np.pi, 0.0], dtype=np.float32),
-        high=np.array([2 * np.pi, 10.0], dtype=np.float32),
+        low=np.array([0.0, 0.0], dtype=np.float32),
+        high=np.array([np.pi, 10.0], dtype=np.float32),
             dtype=np.float32
         )
 
@@ -51,7 +51,7 @@ class SkittlesEnv(gym.Env):
         angle, v = action
 
         # Initial release position
-        xr = self.xp - self.l * np.cos(angle)
+        xr = self.xp + self.l * np.cos(angle)
         yr = self.yp + self.l * np.sin(angle)
 
         # Initial velocity
@@ -120,30 +120,6 @@ class SkittlesEnv(gym.Env):
                                 show_paddle=True, show_goal=True, cmap="viridis"):
         """
         Plot top-down view of the Skittles task with paddle, target, and sample trajectories.
-
-        Parameters
-        ----------
-        actions : array-like or None
-            Actions [angle(rad), velocity] to plot. If None, sample uniformly from action space.
-        n_samples : int
-            Number of random actions to sample (ignored if actions provided).
-        seed : int or None
-            Random seed for reproducible sampling.
-        ax : matplotlib Axes or None
-            Axis to draw into. Creates new one if None.
-        show_paddle : bool
-            If True, draw paddle from pivot to release point.
-        show_goal : bool
-            If True, plot the target marker.
-        cmap : str
-            Colormap to use for trajectories (colors vary with initial speed).
-
-        Returns
-        -------
-        ax : matplotlib Axes
-            Axis with the plot.
-        data : dict
-            Contains 'actions', 'release_points', and 'trajectories'.
         """
         import numpy as np
         import matplotlib.pyplot as plt
@@ -180,14 +156,16 @@ class SkittlesEnv(gym.Env):
             ax.plot(0, 0, marker='o', color="black", ms=30)
 
         for (angle, v), color in zip(actions, colors):
+            print(np.rad2deg(angle))
+            
             # Release point
-            xr = self.xp - self.l * np.cos(angle)
+            xr = self.xp + self.l * np.cos(angle)
             yr = self.yp + self.l * np.sin(angle)
             release_points.append((xr, yr))
 
             # Velocity at release
             vx = v * np.sin(angle)
-            vy = v * np.cos(angle)
+            vy = - v * np.cos(angle)
 
             # Ball trajectory
             x_t = xr * np.cos(self.omega * self.t) + (vx / self.omega) * np.sin(self.omega * self.t)
@@ -201,6 +179,8 @@ class SkittlesEnv(gym.Env):
             if show_paddle:
                 ax.plot([self.xp, xr], [self.yp, yr], "-", color="black", lw=2)
                 ax.plot(self.xp, self.yp, "o", ms=10, color="black")
+
+            print(angle)
 
         ax.set_aspect("equal", adjustable="box")
         ax.axis("off")
