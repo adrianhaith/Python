@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
 from plotting import plot_policy_snapshot
+import matplotlib
+matplotlib.rcParams['svg.fonttype'] = 'none'
 
 from models import SkittlesEnv, SkittlesLearner
 
@@ -36,7 +38,8 @@ participant = SkittlesLearner(
 )
 env = SkittlesEnv()
 
-print(np.exp(participant.nu))
+ax, out = env.plot_sample_trajectories(n_samples=1, seed=5)
+plt.savefig("skittles_top_down.svg", format="svg", bbox_inches='tight')
 
 n_trials = 8000
 actions = np.zeros((n_trials, 2))
@@ -227,13 +230,13 @@ from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, PowerNorm
 
 # Color map setup
-cmap = plt.cm.winter_r  # or 'plasma', 'inferno', etc.
-norm = Normalize(vmin=0, vmax=n_trials)  # normalize trial index for colormap
+cmap = plt.cm.summer_r  # or 'plasma', 'inferno', etc.
+norm = PowerNorm(gamma=.5, vmin=0, vmax=n_trials)  # normalize trial index for colormap
 
 
-fig, ax = plt.subplots(figsize=(6, 6))
+fig, ax = plt.subplots(figsize=(4, 4))
 
-ax.pcolormesh(A_deg, V, R, cmap='Greys_r', alpha=0.9, norm=PowerNorm(gamma=3))
+ax.pcolormesh(A_deg, V, R, cmap='Greys_r', alpha=0.9, norm=PowerNorm(gamma=5), rasterized=True)
 
 snapshot_step_size = 2000
 
@@ -251,16 +254,18 @@ for trial, color in zip(snapshot_trials, colors):
     plot_policy_snapshot(ax, mu, cov, color)
 
 # Formatting
-ax.set_xlim(A_deg.min(), 320)
-ax.set_ylim(V.min(), 6)
+ax.set_xlim(A_deg.min(), 310)
+ax.set_ylim(V.min(), 5.5)
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
-ax.set_title("Policy Evolution Across Learning")
 
 sm = ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])
 #cbar = plt.colorbar(sm, ax=ax, label="Training Progress (Trials)")
 
 plt.tight_layout()
+plt.savefig("policy_evolution.svg", format="svg", bbox_inches='tight')
 plt.show()
+
+
 # %%

@@ -116,6 +116,102 @@ class SkittlesEnv(gym.Env):
     
         return A, V, R
     
+    def plot_sample_trajectories(self, actions=None, n_samples=10, seed=None, ax=None,
+                                show_paddle=True, show_goal=True, cmap="viridis"):
+        """
+        Plot top-down view of the Skittles task with paddle, target, and sample trajectories.
+
+        Parameters
+        ----------
+        actions : array-like or None
+            Actions [angle(rad), velocity] to plot. If None, sample uniformly from action space.
+        n_samples : int
+            Number of random actions to sample (ignored if actions provided).
+        seed : int or None
+            Random seed for reproducible sampling.
+        ax : matplotlib Axes or None
+            Axis to draw into. Creates new one if None.
+        show_paddle : bool
+            If True, draw paddle from pivot to release point.
+        show_goal : bool
+            If True, plot the target marker.
+        cmap : str
+            Colormap to use for trajectories (colors vary with initial speed).
+
+        Returns
+        -------
+        ax : matplotlib Axes
+            Axis with the plot.
+        data : dict
+            Contains 'actions', 'release_points', and 'trajectories'.
+        """
+        import numpy as np
+        import matplotlib.pyplot as plt
+        from matplotlib.cm import get_cmap
+
+        rng = np.random.default_rng(seed)
+
+        if actions is None:
+            lows = self.action_space.low
+            highs = self.action_space.high
+            actions = np.column_stack([
+                rng.uniform(lows[0], highs[0], size=n_samples),
+                rng.uniform(lows[1], highs[1], size=n_samples)
+            ])
+        else:
+            actions = np.asarray(actions)
+            if actions.ndim == 1:
+                actions = actions[None, :]
+
+        speeds = actions[:, 1]
+        cmap_fn = get_cmap(cmap)
+        speed_min, speed_max = speeds.min(), speeds.max()
+        colors = [cmap_fn((v - speed_min) / (speed_max - speed_min + 1e-9)) for v in speeds]
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(6, 6))
+
+        release_points = []
+        trajectories = []
+
+        if show_goal:
+            ax.plot(self.target[0], self.target[1], marker="o", ms=20,
+                    color="red", mec="black", mew=1.0, zorder=4, label="goal")
+            ax.plot(0, 0, marker='o', color="black", ms=30)
+
+        for (angle, v), color in zip(actions, colors):
+            # Release point
+            xr = self.xp - self.l * np.cos(angle)
+            yr = self.yp + self.l * np.sin(angle)
+            release_points.append((xr, yr))
+
+            # Velocity at release
+            vx = v * np.sin(angle)
+            vy = v * np.cos(angle)
+
+            # Ball trajectory
+            x_t = xr * np.cos(self.omega * self.t) + (vx / self.omega) * np.sin(self.omega * self.t)
+            y_t = yr * np.cos(self.omega * self.t) + (vy / self.omega) * np.sin(self.omega * self.t)
+            traj = np.column_stack([x_t, y_t])
+            trajectories.append(traj)
+
+            ax.plot(traj[:, 0], traj[:, 1], color=color, lw=2, alpha=0.9)
+            ax.plot(x_t[25], y_t[25], "o", ms=30, mfc="white", mec=color, mew=1.5)
+
+            if show_paddle:
+                ax.plot([self.xp, xr], [self.yp, yr], "-", color="black", lw=2)
+                ax.plot(self.xp, self.yp, "o", ms=10, color="black")
+
+        ax.set_aspect("equal", adjustable="box")
+        ax.axis("off")
+        ax.set_xlim(-1.5, 1.5)
+        ax.grid(False)
+
+        return ax, {"actions": actions,
+                    "release_points": np.array(release_points),
+                    "trajectories": trajectories}
+        
+
     
 # agent model - defines the policy and learning rules
 class SkittlesLearner:
