@@ -8,11 +8,9 @@ Created on Sun Jul  6 16:54:08 2025
 
 # script to define environment and agent models for the skittles task
 import numpy as np
-import gymnasium as gym
-from gymnasium import spaces
 
 # environment model - defines the skittles task, action space, reward etc.
-class SkittlesEnv(gym.Env):
+class SkittlesEnv:
     def __init__(self, dt=0.01, T=2.0):
         super().__init__()
 
@@ -26,16 +24,10 @@ class SkittlesEnv(gym.Env):
         self.target = np.array([0.75, .75], dtype=np.float32)
 
         # Action: [angle (rad), velocity (m/s)]
-        self.action_space = spaces.Box(
-        low=np.array([0.0, 0.0], dtype=np.float32),
-        high=np.array([np.pi, 10.0], dtype=np.float32),
-            dtype=np.float32
-        )
-
-        # Dummy observation
-        self.observation_space = spaces.Box(
-            low=np.array([0.0]), high=np.array([1.0]), shape=(1,), dtype=np.float32
-        )
+        self.angle_range = (0.0, np.pi)
+        self.vel_range = (0.0, 10.0)
+        self.action_space = np.array([self.angle_range, self.vel_range])  # for convenience
+        self.observation_space = None  # no state
 
         # Time vector for simulation
         self.dt = dt
@@ -44,7 +36,6 @@ class SkittlesEnv(gym.Env):
         self.omega = np.sqrt(self.k / self.m)
 
     def reset(self, *, seed=None, options=None):
-        super().reset(seed=seed)
         return np.array([0.0], dtype=np.float32), {}
 
     def step(self, action):
@@ -96,9 +87,9 @@ class SkittlesEnv(gym.Env):
         """
         # Use environment's action space bounds by default
         if angle_range is None:
-            angle_range = (self.action_space.low[0], self.action_space.high[0])
+            angle_range = self.angle_range
         if velocity_range is None:
-            velocity_range = (self.action_space.low[1], self.action_space.high[1])
+            velocity_range = self.vel_range
     
         angles = np.linspace(angle_range[0], angle_range[1], resolution)
         velocities = np.linspace(velocity_range[0], velocity_range[1], resolution)
@@ -128,11 +119,10 @@ class SkittlesEnv(gym.Env):
         rng = np.random.default_rng(seed)
 
         if actions is None:
-            lows = self.action_space.low
-            highs = self.action_space.high
+            # sample a random action
             actions = np.column_stack([
-                rng.uniform(lows[0], highs[0], size=n_samples),
-                rng.uniform(lows[1], highs[1], size=n_samples)
+                rng.uniform(self.angle_range[0], self.angle_range[1], size=n_samples),
+                rng.uniform(self.vel_range[0], self.vel_range[1], size=n_samples)
             ])
         else:
             actions = np.asarray(actions)
