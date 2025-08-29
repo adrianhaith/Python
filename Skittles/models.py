@@ -11,17 +11,17 @@ import numpy as np
 
 # environment model - defines the skittles task, action space, reward etc.
 class SkittlesEnv:
-    def __init__(self, dt=0.01, T=2.0):
+    def __init__(self, dt=0.01, T=2.0, target=[0.75, 0.75]):
         super().__init__()
 
         # Physical constants
         self.k = 1.0     # spring stiffness
         self.m = 0.1     # mass
-        self.l = 0.2     # paddle length
+        self.l = 0.4     # paddle length
         self.xp = 0.0    # paddle pivot x
-        self.yp = -1   # paddle pivot y
+        self.yp = -1.5   # paddle pivot y
 
-        self.target = np.array([0.75, .75], dtype=np.float32)
+        self.target = target # target position
 
         # Action: [angle (rad), velocity (m/s)]
         self.angle_range = (0.0, np.pi)

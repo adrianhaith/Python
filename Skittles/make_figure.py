@@ -29,3 +29,5 @@ env = SkittlesEnv()
 
 ax, out = env.plot_sample_trajectories(n_samples=1, seed=5)
 plt.savefig("skittles_top_down.svg", format="svg", bbox_inches='tight')
+
+

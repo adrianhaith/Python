@@ -26,17 +26,19 @@ make_animation = False
 # %% Simulate learning
 
 # Set random number seed
-np.random.seed(2)
+np.random.seed(1)
+
+env = SkittlesEnv(target=[.6, .3])
 
 participant = SkittlesLearner(
-    init_mean=[110, 2],
-    init_std=[10, .75],
+    init_mean=[30, 1.5],
+    init_std=[8, .5],
     alpha=0.05,
     alpha_nu=0.05,
     alpha_phi=0.05,
     rwd_baseline_decay=0.99
 )
-env = SkittlesEnv()
+
 
 ax, out = env.plot_sample_trajectories(n_samples=1)
 
@@ -233,9 +235,11 @@ cmap = plt.cm.summer_r  # or 'plasma', 'inferno', etc.
 norm = PowerNorm(gamma=.5, vmin=0, vmax=n_trials)  # normalize trial index for colormap
 
 
-fig, ax = plt.subplots(figsize=(4, 4))
+fig, ax = plt.subplots(figsize=(5, 4))
 
-ax.pcolormesh(A_deg, V, R, cmap='Greys_r', alpha=0.9, norm=PowerNorm(gamma=5), rasterized=True)
+rwd_norm = PowerNorm(gamma=5, vmin=-1, vmax=0)
+rwd_map = ax.pcolormesh(A_deg, V, R, cmap='Greys_r', alpha=0.9, norm=rwd_norm, rasterized=True)
+cbar = plt.colorbar(rwd_map)
 
 snapshot_step_size = 2000
 
@@ -253,18 +257,42 @@ for trial, color in zip(snapshot_trials, colors):
     plot_policy_snapshot(ax, mu, cov, color)
 
 # Formatting
-ax.set_xlim(A_deg.min(), 150)
-ax.set_ylim(V.min(), 5.5)
+ax.set_xlim(A_deg.min(), 100)
+ax.set_ylim(V.min(), 4)
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
 
 sm = ScalarMappable(cmap=cmap, norm=norm)
 sm.set_array([])
-#cbar = plt.colorbar(sm, ax=ax, label="Training Progress (Trials)")
+
 
 plt.tight_layout()
 plt.savefig("policy_evolution.svg", format="svg", bbox_inches='tight')
 plt.show()
 
+# %% --- make the heatmap
+height = 200
+width = 10
+gradient = np.linspace(R.min(), 0, height).reshape(-1, 1)
+gradient = np.repeat(gradient, width, axis=1)  # make it wide enough
 
+# --- Plot it as a heatmap ---
+fig, ax = plt.subplots(figsize=(1.2, 4))
+im = ax.imshow(gradient, cmap='Greys_r', norm=rwd_norm, aspect='auto', origin='lower')
+
+# Add custom ticks on the y-axis
+tick_vals = np.linspace(0, 1, 5)
+tick_pos = np.linspace(0, height-1, len(tick_vals))
+ax.set_yticks(tick_pos)
+ax.set_yticklabels([f"{v:.2f}" for v in tick_vals])
+ax.set_xticks([])
+ax.set_ylabel("Reward")
+
+# Remove axes for clean visual
+#ax.axis('off')
+
+# Save or use inline as a "colorbar-style" gradient
+plt.tight_layout()
+plt.savefig("rwd_colorbar.svg", format="svg", bbox_inches='tight')
+plt.show()
 # %%
