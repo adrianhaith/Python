@@ -55,7 +55,7 @@ class TNCCost:
             shrunk_actions = mu + alpha * (actions - mu)
             return self.mean_error(shrunk_actions)
 
-        res = minimize_scalar(objective, bounds=(0,1), method="bounded")
+        res = minimize_scalar(objective, bounds=(0,5), method="bounded")
 
         best_err = res.fun
         return actual_err - best_err
@@ -101,19 +101,9 @@ class TNCCost:
     # Wrapper: compute all three costs
     # -------------------------------
     def compute_all(self, actions):
-
-        start = time.time()
         t_cost_val = self.t_cost(actions)
-        print("T-Cost time:", time.time() - start)
-
-        start = time.time()
         n_cost_val = self.n_cost(actions)
-        print("N-Cost time:", time.time() - start)
-
-        start = time.time()
         c_cost_val = self.c_cost(actions)
-        print("C-Cost time:", time.time() - start)
-
         return {
             "T-Cost": t_cost_val,
             "N-Cost": n_cost_val,

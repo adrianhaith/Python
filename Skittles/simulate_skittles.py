@@ -32,18 +32,18 @@ np.random.seed(1)
 env = SkittlesEnv(target=[.6, .3])
 
 participant = SkittlesLearner(
-    init_mean=[30, 1.5],
+    init_mean=[20, 2],
     init_std=[8, .5],
-    alpha=0.05,
-    alpha_nu=0.05,
-    alpha_phi=0.05,
+    alpha=0.1,
+    alpha_nu=0.1,
+    alpha_phi=0.1,
     rwd_baseline_decay=0.99
 )
 
 
 ax, out = env.plot_sample_trajectories(n_samples=1)
 
-n_trials = 8000
+n_trials = 3000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus = np.zeros((n_trials, 2))
@@ -245,7 +245,7 @@ cbar = plt.colorbar(rwd_map)
 snapshot_step_size = 2000
 
 #snapshot_trials = np.arange(snapshot_step_size-1, n_trials+1, snapshot_step_size)
-snapshot_trials = np.array([0, 499, 999, 1999, 3999, 7999])
+snapshot_trials = np.array([0, 499, 999, 1999, 2999])
 #snapshot_trials = np.array([0,99, 199, 299])
 snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
 
