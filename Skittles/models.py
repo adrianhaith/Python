@@ -38,7 +38,7 @@ class SkittlesEnv:
     def reset(self, *, seed=None, options=None):
         return np.array([0.0], dtype=np.float32), {}
 
-    def step(self, action):
+    def compute_error(self, action):
         angle, v = action
 
         # Initial release position
@@ -57,10 +57,7 @@ class SkittlesEnv:
         dx = x_t - self.target[0]
         dy = y_t - self.target[1]
         distances = np.sqrt(dx**2 + dy**2)
-
-        # Reward: negative of the minimum distance
-        reward = -np.min(distances)
-
+    
         # Store full kinematic information in info
         info = {
             "trajectory": np.stack([x_t, y_t], axis=1),
@@ -68,6 +65,13 @@ class SkittlesEnv:
             "release_point": (xr, yr),
             "target": self.target
         }
+        return np.min(distances), info
+        
+    def step(self, action):
+        min_dist, info = self.compute_error(action)
+
+        # Reward: negative of the minimum distance
+        reward = -min_dist
 
         return np.array([0.0], dtype=np.float32), reward, True, False, info
     

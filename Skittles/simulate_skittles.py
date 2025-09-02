@@ -42,7 +42,7 @@ participant = SkittlesLearner(
 
 ax, out = env.plot_sample_trajectories(n_samples=1)
 
-n_trials = 8000
+n_trials = 1200
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus = np.zeros((n_trials, 2))
@@ -295,4 +295,40 @@ ax.set_ylabel("Reward")
 plt.tight_layout()
 plt.savefig("rwd_colorbar.svg", format="svg", bbox_inches='tight')
 plt.show()
+
+
+
+
+
+# %% Conduct TNC analysis
+from TNC import TNCCost
+
+# actions: (n_trials, 2) array of [release_angle, release_velocity]
+block_size = 60
+n_blocks = actions.shape[0] // block_size
+
+tnc = TNCCost(env)
+
+all_results = []
+for b in range(n_blocks):
+    print("block")
+    block_actions = actions[b*block_size : (b+1)*block_size]
+    results = tnc.compute_all(block_actions)
+    all_results.append(results)
+
+# %%
+plt.figure(figsize=(8,5))
+
+plt.plot(results["T-Cost"], label="T-Cost")
+plt.plot(results["N-Cost"], label="N-Cost")
+plt.plot(results["C-Cost"], label="C-Cost")
+
+plt.xlabel("Block (60 trials each)")
+plt.ylabel("Cost (mean error difference)")
+plt.title("TNC-Cost decomposition across practice")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
 # %%
