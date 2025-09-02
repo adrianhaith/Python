@@ -110,4 +110,3 @@ class TNCCost:
             "C-Cost": c_cost_val,
             "MeanError": self.mean_error(actions)
         }
-
