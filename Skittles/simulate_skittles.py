@@ -29,11 +29,13 @@ make_animation = False
 # Set random number seed
 np.random.seed(1)
 
-env = SkittlesEnv(target=[.6, .3])
+#env = SkittlesEnv(target=[.6, .3])
+env = SkittlesEnv(target=[1, .4])
+
 
 participant = SkittlesLearner(
-    init_mean=[20, 2],
-    init_std=[8, .5],
+    init_mean=[25, 2.5],
+    init_std=[8, .7],
     alpha=0.1,
     alpha_nu=0.1,
     alpha_phi=0.1,
@@ -55,6 +57,8 @@ rwd_baselines = np.zeros(n_trials)
 participant.initialize_rwd_baseline(env)
 
 # %%
+
+
 for t in range(n_trials):
 
     rwd_baselines[t] = participant.rwd_baseline
@@ -234,8 +238,6 @@ from matplotlib.colors import Normalize, PowerNorm
 # Color map setup
 cmap = plt.cm.summer_r  # or 'plasma', 'inferno', etc.
 norm = PowerNorm(gamma=.5, vmin=0, vmax=n_trials)  # normalize trial index for colormap
-
-
 fig, ax = plt.subplots(figsize=(5, 4))
 
 rwd_norm = PowerNorm(gamma=5, vmin=-1, vmax=0)
@@ -260,7 +262,7 @@ for trial, color in zip(snapshot_trials, colors):
 
 # Formatting
 ax.set_xlim(A_deg.min(), 100)
-ax.set_ylim(V.min(), 4)
+ax.set_ylim(V.min(), 6)
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
 
@@ -313,7 +315,6 @@ tnc = TNCCost(env)
 
 all_results = []
 for b in range(n_blocks):
-    print("block")
     block_actions = actions[b*block_size : (b+1)*block_size]
     results = tnc.compute_all(block_actions)
     all_results.append(results)
