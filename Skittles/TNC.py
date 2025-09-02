@@ -1,5 +1,8 @@
 # define a class to implement the TNC-cost analysis from Muller & Sternad, 2009, EBR
 import numpy as np
+from scipy.optimize import minimize
+from scipy.optimize import minimize_scalar
+import time
 
 class TNCCost:
     def __init__(self, env, n_grid=60, n_collapse=100, n_samples=60):
@@ -10,9 +13,6 @@ class TNCCost:
         n_samples: trials per block (default = 60, like in paper)
         """
         self.env = env
-        self.n_grid = n_grid
-        self.n_collapse = n_collapse
-        self.n_samples = n_samples
 
     def mean_error(self, actions):
         errors = []
@@ -25,22 +25,20 @@ class TNCCost:
     # T-Cost: shift distribution to most tolerant region
     # -------------------------------
     def t_cost(self, actions):
-        mu = np.mean(actions, axis=0)
-        cov = np.cov(actions, rowvar=False)
         actual_err = self.mean_error(actions)
 
-        # Define grid limits based on task (adjust to your env)
-        angle_range = np.linspace(0, -180*np.pi/180, self.n_grid)
-        vel_range   = np.linspace(200*np.pi/180, 800*np.pi/180, self.n_grid)
+        # Objective: shift dataset by delta, then compute mean error
+        def objective(delta):
+            shifted = actions + delta
+            return self.mean_error(shifted)
 
-        best_err = np.inf
-        for a in angle_range:
-            for v in vel_range:
-                shifted_actions = np.random.multivariate_normal([a, v], cov, size=self.n_samples)
-                err = self.mean_error(shifted_actions)
-                if err < best_err:
-                    best_err = err
+        # Start at no shift
+        x0 = np.array([0.0, 0.0])
 
+        # Optimize (you can set bounds if you want to limit angle/vel range)
+        res = minimize(objective, x0, method="Nelder-Mead")
+
+        best_err = res.fun
         return actual_err - best_err
 
     # -------------------------------
@@ -50,45 +48,75 @@ class TNCCost:
         mu = np.mean(actions, axis=0)
         actual_err = self.mean_error(actions)
 
-        best_err = np.inf
-        for k in range(1, self.n_collapse+1):
-            alpha = 1 - k/self.n_collapse
+        # Objective: collapse factor alpha ∈ [0, 1]
+        # alpha = 1 → original dataset
+        # alpha = 0 → all points at mean
+        def objective(alpha):
             shrunk_actions = mu + alpha * (actions - mu)
-            err = self.mean_error(shrunk_actions)
-            if err < best_err:
-                best_err = err
+            return self.mean_error(shrunk_actions)
 
+        res = minimize_scalar(objective, bounds=(0,1), method="bounded")
+
+        best_err = res.fun
         return actual_err - best_err
 
     # -------------------------------
     # C-Cost: optimize covariation via greedy pair-swapping
     # -------------------------------
     def c_cost(self, actions):
-        actual_err = self.mean_error(actions)
-        optimized = actions.copy()
-        improved = True
+        n = len(actions)
+        angles = actions[:,0]
+        vels   = actions[:,1]
 
+        # Precompute all possible errors
+        error_matrix = np.zeros((n,n))
+        for i, a in enumerate(angles):
+            for j, v in enumerate(vels):
+                error_matrix[i,j] = self.env.compute_error([a,v])[0]
+
+        # Initial pairing = identity (angle_i with vel_i)
+        pairing = np.arange(n)
+        current_err = np.mean([error_matrix[i, pairing[i]] for i in range(n)])
+    
+        improved = True
         while improved:
             improved = False
-            for i in range(len(optimized)):
-                for j in range(i+1, len(optimized)):
-                    swapped = optimized.copy()
-                    swapped[i,1], swapped[j,1] = optimized[j,1], optimized[i,1]  # swap velocities
+            for i in range(n):
+                for j in range(i+1, n):
+                    # Try swapping velocities (pairing indices)
+                    new_pairing = pairing.copy()
+                    new_pairing[i], new_pairing[j] = pairing[j], pairing[i]
 
-                    if self.mean_error(swapped) < self.mean_error(optimized):
-                        optimized = swapped
+                    new_err = np.mean([error_matrix[k, new_pairing[k]] for k in range(n)])
+                    if new_err < current_err:
+                        pairing = new_pairing
+                        current_err = new_err
                         improved = True
 
-        best_err = self.mean_error(optimized)
+        best_err = current_err
+        actual_err = np.mean([error_matrix[i,i] for i in range(n)])  # original pairs
         return actual_err - best_err
 
     # -------------------------------
     # Wrapper: compute all three costs
     # -------------------------------
     def compute_all(self, actions):
+
+        start = time.time()
+        t_cost_val = self.t_cost(actions)
+        print("T-Cost time:", time.time() - start)
+
+        start = time.time()
+        n_cost_val = self.n_cost(actions)
+        print("N-Cost time:", time.time() - start)
+
+        start = time.time()
+        c_cost_val = self.c_cost(actions)
+        print("C-Cost time:", time.time() - start)
+
         return {
-            "T-Cost": self.t_cost(actions),
-            "N-Cost": self.n_cost(actions),
-            "C-Cost": self.c_cost(actions),
+            "T-Cost": t_cost_val,
+            "N-Cost": n_cost_val,
+            "C-Cost": c_cost_val,
             "MeanError": self.mean_error(actions)
         }

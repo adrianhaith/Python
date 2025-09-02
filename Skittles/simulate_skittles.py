@@ -12,6 +12,7 @@ Created on Sun Jul  6 16:54:38 2025
 # first, import needed libraries
 # %% Imports
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize
@@ -42,7 +43,7 @@ participant = SkittlesLearner(
 
 ax, out = env.plot_sample_trajectories(n_samples=1)
 
-n_trials = 1200
+n_trials = 8000
 actions = np.zeros((n_trials, 2))
 rewards = np.zeros(n_trials)
 mus = np.zeros((n_trials, 2))
@@ -245,6 +246,7 @@ snapshot_step_size = 2000
 
 #snapshot_trials = np.arange(snapshot_step_size-1, n_trials+1, snapshot_step_size)
 snapshot_trials = np.array([0, 499, 999, 1999, 3999, 7999])
+#snapshot_trials = np.array([0,99, 199, 299])
 snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
 
 colors = [cmap(norm(t)) for t in snapshot_trials] # color to use for each snapshot
@@ -316,12 +318,12 @@ for b in range(n_blocks):
     results = tnc.compute_all(block_actions)
     all_results.append(results)
 
+
 # %%
 plt.figure(figsize=(8,5))
+df_results = pd.DataFrame(all_results)  # converts list of dicts → DataFrame
 
-plt.plot(results["T-Cost"], label="T-Cost")
-plt.plot(results["N-Cost"], label="N-Cost")
-plt.plot(results["C-Cost"], label="C-Cost")
+df_results[["T-Cost", "N-Cost", "C-Cost"]].plot()
 
 plt.xlabel("Block (60 trials each)")
 plt.ylabel("Cost (mean error difference)")
