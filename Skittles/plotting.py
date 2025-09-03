@@ -20,7 +20,7 @@ def plot_policy_snapshot(ax, mu, cov, color, n_samples=25, show_ellipse=True, la
     """
     # Sample actions
     samples = np.random.multivariate_normal(mu, cov, size=n_samples)
-    ax.scatter(samples[:, 0], samples[:, 1], s=10, color=color, label=label)
+    ax.scatter(samples[:, 0], samples[:, 1], s=25, color=color, label=label)
 
     if show_ellipse:
         eigvals, eigvecs = np.linalg.eigh(cov)
@@ -31,5 +31,5 @@ def plot_policy_snapshot(ax, mu, cov, color, n_samples=25, show_ellipse=True, la
         chisq_val = 5.991  # from chi^2 with 2 degrees of freedom - appropriate for plotting a 95% confidence interval for the covariance ellipse
         width, height = 2 * np.sqrt(chisq_val * eigvals)
         ellipse = Ellipse(mu, width, height, angle=angle, edgecolor=color,
-                          facecolor='none', lw=1.5)
+                          facecolor='none', lw=2)
         ax.add_patch(ellipse)

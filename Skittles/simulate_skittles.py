@@ -27,15 +27,15 @@ make_animation = False
 # %% Simulate learning
 
 # Set random number seed
-np.random.seed(1)
+np.random.seed(10)
 
 #env = SkittlesEnv(target=[.6, .3])
-env = SkittlesEnv(target=[1, .4])
+env = SkittlesEnv(target=[.25, 1.2])
 
 
 participant = SkittlesLearner(
-    init_mean=[25, 2.5],
-    init_std=[8, .7],
+    init_mean=[85, 3.5],
+    init_std=[8, .6],
     alpha=0.1,
     alpha_nu=0.1,
     alpha_phi=0.1,
@@ -231,7 +231,6 @@ if(make_animation):
 # %% ---- Plot evolution of training in a single panel ---------------------------
 # -------------------------------
 
-
 from matplotlib.cm import ScalarMappable
 from matplotlib.colors import Normalize, PowerNorm
 
@@ -247,9 +246,9 @@ cbar = plt.colorbar(rwd_map)
 snapshot_step_size = 2000
 
 #snapshot_trials = np.arange(snapshot_step_size-1, n_trials+1, snapshot_step_size)
-snapshot_trials = np.array([0, 499, 999, 1999, 2999])
+snapshot_trials = np.array([0, 999, 1999, 2999])
 #snapshot_trials = np.array([0,99, 199, 299])
-snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
+#snapshot_trials = np.concatenate((np.array([0]), snapshot_trials))
 
 colors = [cmap(norm(t)) for t in snapshot_trials] # color to use for each snapshot
 
@@ -258,11 +257,11 @@ for trial, color in zip(snapshot_trials, colors):
     nu = nus[trial]
     phi = phis[trial]
     cov = cov_mats[trial]
-    plot_policy_snapshot(ax, mu, cov, color)
+    plot_policy_snapshot(ax, mu, cov, color, n_samples=20)
 
 # Formatting
-ax.set_xlim(A_deg.min(), 100)
-ax.set_ylim(V.min(), 6)
+ax.set_xlim(A_deg.min(), 120)
+ax.set_ylim(0, env.angvel2vel(1000))
 ax.set_xlabel("Launch Angle (degrees)")
 ax.set_ylabel("Velocity (m/s)")
 
@@ -299,39 +298,3 @@ ax.set_ylabel("Reward")
 plt.tight_layout()
 plt.savefig("rwd_colorbar.svg", format="svg", bbox_inches='tight')
 plt.show()
-
-
-
-
-
-# %% Conduct TNC analysis
-from TNC import TNCCost
-
-# actions: (n_trials, 2) array of [release_angle, release_velocity]
-block_size = 60
-n_blocks = actions.shape[0] // block_size
-
-tnc = TNCCost(env)
-
-all_results = []
-for b in range(n_blocks):
-    block_actions = actions[b*block_size : (b+1)*block_size]
-    results = tnc.compute_all(block_actions)
-    all_results.append(results)
-
-
-# %%
-plt.figure(figsize=(8,5))
-df_results = pd.DataFrame(all_results)  # converts list of dicts → DataFrame
-
-df_results[["T-Cost", "N-Cost", "C-Cost"]].plot()
-
-plt.xlabel("Block (60 trials each)")
-plt.ylabel("Cost (mean error difference)")
-plt.title("TNC-Cost decomposition across practice")
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
-
-# %%

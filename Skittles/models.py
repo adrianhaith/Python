@@ -19,7 +19,7 @@ class SkittlesEnv:
         self.m = 0.1     # mass
         self.l = 0.4     # paddle length
         self.xp = 0.0    # paddle pivot x
-        self.yp = -1.5   # paddle pivot y
+        self.yp = -1.3   # paddle pivot y
 
         self.target = target # target position
 
@@ -57,7 +57,7 @@ class SkittlesEnv:
         dx = x_t - self.target[0]
         dy = y_t - self.target[1]
         distances = np.sqrt(dx**2 + dy**2)
-    
+
         # Store full kinematic information in info
         info = {
             "trajectory": np.stack([x_t, y_t], axis=1),
@@ -184,7 +184,13 @@ class SkittlesEnv:
         return ax, {"actions": actions,
                     "release_points": np.array(release_points),
                     "trajectories": trajectories}
-        
+    
+    # function to compute angular velocity based on release velocity
+    def vel2angvel(self, vel):
+        return np.rad2deg(vel / self.l)
+    
+    def angvel2vel(self, angvel):
+        return np.deg2rad(angvel * self.l)
 
     
 # agent model - defines the policy and learning rules
