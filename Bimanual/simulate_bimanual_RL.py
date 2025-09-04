@@ -155,3 +155,12 @@ plot_policy_update(history['Ws'][tt],history['Ws'][tt+1],history['target_angles'
 ax = plot_value_function(history['Vs'][tt],participant)
 ax.plot(history['target_angles'][tt],history['rewards'][tt], 'o', label='Sampled rewards')
 # %%
+from visualization import CursorLearningVisualizer
+
+viz = CursorLearningVisualizer(participant, env, history)
+
+tt=416
+viz.plot_snapshot(tt)
+viz.plot_value_function(tt)
+viz.plot_policy_update(tt)
+# %%

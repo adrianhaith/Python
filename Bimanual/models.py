@@ -54,7 +54,8 @@ class CursorControlLearner:
                  init_nu=None, 
                  seed=None, 
                  baseline_decay=0.99,
-                 radius=.12
+                 radius=.12,
+                 epsilon=0.1 # clipping threshold for PPO-like stabilization
                 ):
         self.n_basis = n_basis
         self.kappa = kappa
@@ -71,6 +72,8 @@ class CursorControlLearner:
 
         self.V = np.zeros(self.n_basis)
         self.baseline_decay = baseline_decay
+
+        self.epsilon = epsilon
 
     def compute_basis(self, s):
         diffs = s - self.basis_centers

@@ -1,0 +1,147 @@
+import matplotlib.pyplot as plt
+import numpy as np
+
+class CursorLearningVisualizer:
+    def __init__(self, learner, env, history, cmap=plt.cm.hsv):
+        self.learner = learner
+        self.env = env
+        self.history = history
+        self.n_basis = learner.n_basis
+        self.radius = env.radius
+        self.target_angles = env.target_angles
+        self.cmap = cmap
+
+    def angle_to_color(self, angle):
+        return self.cmap((angle % (2 * np.pi)) / (2 * np.pi))
+
+    def plot_snapshot(self, trial_idx):
+        fig, ax = plt.subplots(figsize=(4, 4))
+
+        # Extract policy + value weights for this trial
+        W = self.history['Ws'][trial_idx]
+        V = self.history['Vs'][trial_idx]
+
+        # Trial-specific info
+        trial_angle = self.history['target_angles'][trial_idx]
+        trial_action = self.history['actions'][trial_idx]
+        cursor_endpoint = [trial_action[1], trial_action[2]]  # Ly, Rx
+
+        # Plot central start position
+        ax.plot(0, 0, 'ko', markersize=4)
+
+        for angle in self.target_angles:
+            phi = self.learner.compute_basis(angle)
+            mu = W @ phi         # mean action
+            val = V @ phi        # estimated value
+
+            # Task-space coordinates
+            cursor_xy = [mu[1], mu[2]]
+            target_xy = self.radius * np.array([np.cos(angle), np.sin(angle)])
+            color = self.angle_to_color(angle)
+
+            # Target location
+            ax.plot(*target_xy, 'o', color=color, markersize=6)
+
+            # Value function visualized as circle around target
+            circle = plt.Circle(target_xy, radius=abs(val), color=color, alpha=0.2)
+            ax.add_patch(circle)
+
+            # Mean action (in task space)
+            ax.plot(*cursor_xy, 'x', color=color, markersize=4)
+
+        # Actual sampled action on this trial (as green dot)
+        ax.plot(cursor_endpoint[0], cursor_endpoint[1], 'o', color=self.angle_to_color(self.history['target_angles'][trial_idx]), markersize=4, label='Sampled')
+        #ax.plot(cursor_endpoint[0], cursor_endpoint[1], 'o', color='black', markersize=4, label='Sampled')
+
+        ax.set_aspect('equal')
+        ax.set_xlim(-0.2, 0.2)
+        ax.set_ylim(-0.2, 0.2)
+        ax.set_title(f"Trial {trial_idx}")
+        ax.axis('off')
+        plt.tight_layout()
+        plt.show()
+
+
+    def plot_value_function(self, trial_idx=None, n_points=200):
+        """
+        Plot the baseline value function b(s) = Vᵀ * phi(s)
+        for a given trial (or current learner state if trial_idx is None).
+        """
+        angles = np.linspace(0, 2 * np.pi, n_points)
+
+        current_angle = self.history['target_angles'][trial_idx]
+        current_reward = self.history['rewards'][trial_idx]
+
+        # Get weights
+        if trial_idx is None:
+            V = self.learner.V
+        else:
+            V = self.history['Vs'][trial_idx]
+
+        values = np.array([V @ self.learner.compute_basis(s) for s in angles])
+
+        fig, ax = plt.subplots(figsize=(6, 3))
+        ax.plot(angles, values, label='Baseline b(s)')
+        ax.plot(current_angle, current_reward, 'o', color='orange')
+
+        ax.set_xlabel("Target angle (radians)")
+        ax.set_ylabel("Estimated reward baseline")
+        ax.set_title(f"Value Function at trial {trial_idx}" if trial_idx is not None else "Current Value Function")
+        ax.grid(True)
+        ax.legend()
+        plt.tight_layout()
+        plt.show()
+
+
+    def plot_policy_update(self, trial_idx, r=0.12, n_points=200):
+        """
+        Plot the pre- vs post-update policy around a given trial.
+        """
+        W_pre = self.history['Ws'][trial_idx]
+        W_post = self.history['Ws'][trial_idx+1]
+        target_angle = self.history['target_angles'][trial_idx]
+        action = self.history['actions'][trial_idx]
+
+        angles = np.linspace(0, 2 * np.pi, n_points)
+        phi_matrix = np.array([self.learner.compute_basis(s) for s in angles])
+
+        mu_pre = phi_matrix @ W_pre.T
+        mu_post = phi_matrix @ W_post.T
+
+        ideal_Ly = r * np.cos(angles)
+        ideal_Rx = r * np.sin(angles)
+
+        target_xy = r * np.array([np.cos(target_angle), np.sin(target_angle)])
+        cursor_xy = np.array([action[1], action[2]])
+
+        fig, axs = plt.subplots(1, 2, figsize=(8, 3), sharex=True)
+
+        # Left hand y (cursor x)
+        axs[0].plot(angles, mu_pre[:, 1], label='Pre-update', color='gray')
+        axs[0].plot(angles, mu_post[:, 1], label='Post-update', color='blue')
+        axs[0].plot(angles, ideal_Ly, '--', label='Ideal', color='black')
+        axs[0].axvline(target_angle, color='red', linestyle=':')
+        axs[0].scatter([target_angle], [target_xy[0]], color='red', label='Target X', zorder=5)
+        axs[0].scatter([target_angle], [cursor_xy[0]], color='green', label='Cursor X', zorder=5)
+        axs[0].set_title("Left Hand Y (Ly)")
+        axs[0].set_ylabel("Ly displacement (cursor x)")
+        axs[0].grid(True)
+
+        # Right hand x (cursor y)
+        axs[1].plot(angles, mu_pre[:, 2], label='Pre-update', color='gray')
+        axs[1].plot(angles, mu_post[:, 2], label='Post-update', color='blue')
+        axs[1].plot(angles, ideal_Rx, '--', label='Ideal', color='black')
+        axs[1].axvline(target_angle, color='red', linestyle=':')
+        axs[1].scatter([target_angle], [target_xy[1]], color='red', label='Target Y', zorder=5)
+        axs[1].scatter([target_angle], [cursor_xy[1]], color='green', label='Cursor Y', zorder=5)
+        axs[1].set_title("Right Hand X (Rx)")
+        axs[1].set_ylabel("Rx displacement (cursor y)")
+        axs[1].grid(True)
+
+        for ax in axs:
+            ax.set_xlabel("Target angle (radians)")
+            ax.set_xlim(0, 2 * np.pi)
+
+        plt.suptitle(f"Policy Before and After Update (Trial {trial_idx})")
+        plt.tight_layout()
+        plt.show()
