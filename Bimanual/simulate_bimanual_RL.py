@@ -17,13 +17,13 @@ from plotting import plot_task_snapshot, plot_policy_update, plot_learning_progr
 
 # %% Simulate learning
 # Create environment
-env = CursorControlEnv(radius=1)
+env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.01,
-    alpha_nu=0.01,
-    sigma=0.3,
+    alpha=0.005,
+    alpha_nu=0.005,
+    sigma=.05,
     seed=2,
     )
 
@@ -31,7 +31,7 @@ participant = CursorControlLearner(
 mean_rwd = participant.initialize_baseline(env, n_trials=1)
 
 # Run learning for 2000 trials
-n_trials = 3000
+n_trials = 100
 #n_basis = 36
 actions = np.zeros((n_trials, 4))
 target_angles = np.zeros(n_trials)
@@ -43,10 +43,8 @@ W_posts = np.zeros((n_trials, 4, participant.n_basis))
 
 
 for trial in range(n_trials):
-    # store participant's reward baseline (for later plotting)
+    # store variables (for later plotting)
     rwd_baselines[trial] = participant.rwd_baseline
-
-    # store weight matrix at the start of each trial (for plotting)
     W_pres[trial] = participant.W.copy()
     
     # Get new target angle
@@ -66,7 +64,7 @@ for trial in range(n_trials):
     rewards[trial] = r
     nus[trial]     = participant.nu   # <-- copy current ν
     
-    
+
 # %% plot outcome
 n_trials = len(rewards)
 time = np.arange(n_trials)

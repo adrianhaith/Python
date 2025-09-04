@@ -9,18 +9,17 @@ Created on Sun Jul  6 16:21:20 2025
 # define models of the environment and the learner
 
 import numpy as np
-import gymnasium as gym
-from gymnasium.spaces import Box, Discrete
 
 # define the skittles environment class
 
-class CursorControlEnv(gym.Env):
+class CursorControlEnv:
     def __init__(self, radius=0.12):
-        super().__init__()
         self.radius = radius
         self.target_angles = np.linspace(0, 2 * np.pi, 8, endpoint=False)
-        self.action_space = Box(low=-2*radius, high=2*radius, shape=(4,), dtype=np.float32)  # Lx, Ly, Rx, Ry
-        self.observation_space = Discrete(len(self.target_angles))  # Target angle index
+        u_range = (-2*radius, 2*radius)
+        self.action_space = np.array([u_range, u_range, u_range, u_range])
+        #self.action_space = Box(low=-2*radius, high=2*radius, shape=(4,), dtype=np.float32)  # Lx, Ly, Rx, Ry
+        self.observation_space = np.array([0.0, 2*np.pi])  # Target angle index
         self.state = None
         self.target_pos = None
 
@@ -38,7 +37,7 @@ class CursorControlEnv(gym.Env):
         cursor_y = Rx  # controlled by R_x
         cursor_pos = np.array([cursor_x, cursor_y])
         error = np.linalg.norm(cursor_pos - self.target_pos)
-        reward = -error ** 2
+        reward = -np.linalg.norm(error)
         return self.state, reward, True, {}
     
 from scipy.special import i0  # Bessel function of the first kind, order 0
@@ -55,7 +54,7 @@ class CursorControlLearner:
                  init_nu=None, 
                  seed=None, 
                  baseline_decay=0.99,
-                 #radius=1
+                 radius=.12
                 ):
         self.n_basis = n_basis
         self.kappa = kappa
