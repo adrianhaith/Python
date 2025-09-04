@@ -43,24 +43,24 @@ plot_policy(participant)
 # Run learning for 2000 trials
 n_trials = 1000
 #n_basis = 36
-actions = np.zeros((n_trials, 4))
-target_angles = np.zeros(n_trials)
-rewards = np.zeros(n_trials)
-nus     = np.zeros((n_trials, 4))   # <-- store log‐eigs
-W_pres = np.zeros((n_trials, 4,participant.n_basis))
-W_posts = np.zeros((n_trials, 4, participant.n_basis))
-Vs = np.zeros((n_trials, participant.n_basis))
-
+history = {
+    'target_angles': np.zeros(n_trials),
+    'actions': np.zeros((n_trials,4)),
+    'rewards': np.zeros(n_trials),
+    'Ws': np.zeros((n_trials, 4, participant.n_basis)),
+    'nus': np.zeros((n_trials, 4)),
+    'Vs': np.zeros((n_trials, participant.n_basis))
+}
 
 for trial in range(n_trials):
-    # store variables (for later plotting)
-    Vs[trial] = participant.V.copy()
-    W_pres[trial] = participant.W.copy()
-    
+    # store variables at start of trial (for later plotting)
+    history['Vs'][trial] = participant.V.copy()
+    history['Ws'][trial] = participant.W.copy()
+    history['nus'][trial]     = participant.nu.copy()   # <-- copy current ν
 
     # Get new target angle
     s = env.reset()
-    target_angles[trial]=s
+    history['target_angles'][trial]=s
     
     # Sample action and get reward
     a, mu, sigma, phi = participant.sample_action(s)
@@ -70,33 +70,28 @@ for trial in range(n_trials):
     participant.update(a, mu, sigma, phi, r)
     
     # Store data for this trial
-    W_posts[trial] = participant.W.copy()
-    actions[trial] = a
-    rewards[trial] = r
-    nus[trial]     = participant.nu.copy()   # <-- copy current ν
-
-    
+    history['actions'][trial] = a
+    history['rewards'][trial] = r
 
 # %% plot outcome
-n_trials = len(rewards)
 time = np.arange(n_trials)
 action_labels = ['Lx', 'Ly', 'Rx', 'Ry']
 
 # Compute standard deviations from nu
-stds = np.exp(nus)  # shape (n_trials, 4)
+stds = np.exp(history['nus'])  # shape (n_trials, 4)
 
 # Plotting
 fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
 
 # Top panel: Rewards
-axs[0].plot(time, rewards, label='Reward')
+axs[0].plot(time, history['rewards'], label='Reward')
 axs[0].set_ylabel("Reward")
 axs[0].set_title("Learning performance")
 axs[0].grid(True)
 
 # Middle panel: Actions
 for i in range(4):
-    axs[1].plot(time, actions[:, i], label=action_labels[i])
+    axs[1].plot(time, history['actions'][:, i], label=action_labels[i])
 axs[1].set_ylabel("Action values")
 axs[1].legend()
 axs[1].grid(True)
@@ -117,7 +112,7 @@ trial_range = range(0, n_trials)
 cmap = plt.cm.hsv  # Cyclic colormap
 
 # Determine number of targets automatically
-n_targets = len(np.unique(target_angles))
+n_targets = len(np.unique(history['target_angles']))
 canonical_angles = np.linspace(0, 2 * np.pi, n_targets, endpoint=False)
 
 # Normalize angle to [0, 1) for color mapping
@@ -137,8 +132,8 @@ for angle in canonical_angles:
 
 # Plot endpoints
 for t in trial_range:
-    a = actions[t]
-    theta = target_angles[t]
+    a = history['actions'][t]
+    theta = history['target_angles'][t]
     endpoint = [a[1], a[2]]  # Ly = cursor x, Rx = cursor y
     ax.plot(*endpoint, 'o', color=angle_to_color(theta), markersize=3, alpha=0.6)
 
@@ -149,14 +144,14 @@ plt.tight_layout()
 plt.show()
 
 # %% plot early/mid/late learning
-plot_learning_progress(actions, target_angles)
+plot_learning_progress(history['actions'], history['target_angles'])
 
-anim = make_animation(actions,target_angles, save_path="cursor_learning.mp4")
+anim = make_animation(history['actions'],history['target_angles'], save_path="cursor_learning.mp4")
 
 # %% -Figure out early learning
 tt=416
-plot_task_snapshot(target_angles[tt],actions[tt])
-plot_policy_update(W_pres[tt],W_posts[tt],target_angles[tt],participant,action=actions[tt])
-ax = plot_value_function(Vs[tt],participant)
-ax.plot(target_angles[tt],rewards[tt], 'o', label='Sampled rewards')
+plot_task_snapshot(history['target_angles'][tt],history['actions'][tt])
+plot_policy_update(history['Ws'][tt],history['Ws'][tt+1],history['target_angles'][tt],participant,action=history['actions'][tt])
+ax = plot_value_function(history['Vs'][tt],participant)
+ax.plot(history['target_angles'][tt],history['rewards'][tt], 'o', label='Sampled rewards')
 # %%
