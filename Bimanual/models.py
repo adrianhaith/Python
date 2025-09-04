@@ -69,7 +69,7 @@ class CursorControlLearner:
             init_nu = np.log([sigma, sigma, sigma, sigma])
         self.nu = np.array(init_nu)
 
-        self.rwd_baseline = 0.0
+        self.V = np.zeros(self.n_basis)
         self.baseline_decay = baseline_decay
 
     def compute_basis(self, s):
@@ -90,8 +90,11 @@ class CursorControlLearner:
 
     def update(self, action, mu, sigma, phi, reward):
         # Subtract baseline
-        adv = reward - self.rwd_baseline
-        self.rwd_baseline = self.baseline_decay * self.rwd_baseline + (1 - self.baseline_decay) * reward
+        b = self.V @ phi
+        adv = reward - b
+        
+        # Value-function update: weight the 
+        self.V += (1 - self.baseline_decay) * adv * phi  # update value function by gradient descent
 
         delta = action - mu
         grad_W = np.outer(delta / (sigma**2), phi) * adv
@@ -101,17 +104,28 @@ class CursorControlLearner:
         self.nu += self.alpha_nu * grad_nu
 
     def initialize_baseline(self, env, n_trials=100):
+        activations = [] # basis activations across trials
         rewards = []
         actions = []
-        for _ in range(n_trials):
+        states = []
+        for t in range(n_trials):
             s = env.reset()
             a, mu, sigma, phi = self.sample_action(s)
             _, r, _, _ = env.step(a)
             rewards.append(r)
             actions.append(a)
+            activations.append(phi)
+            states.append(s)
+            print(s)
 
-        self.rwd_baseline = np.mean(rewards)
-        return np.mean(rewards)
+        Phi = np.stack(activations)
+        R = np.array(rewards)
+        self.V = np.linalg.lstsq(Phi, R, rcond=None)[0]
+        
+
+
+        return states, rewards
+        
 
     def evaluate_policy_over_angles(self, n_points=100):
         """

@@ -1,3 +1,4 @@
+# %%
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -13,40 +14,47 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from models import CursorControlEnv, CursorControlLearner
-from plotting import plot_task_snapshot, plot_policy_update, plot_learning_progress, make_animation
+from plotting import plot_task_snapshot, plot_policy_update, plot_learning_progress, make_animation, plot_value_function, plot_policy
 
-# %% Simulate learning
+# % Simulate learning
 # Create environment
 env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.005,
-    alpha_nu=0.005,
+    alpha=0.02,
+    alpha_nu=0.02,
     sigma=.05,
-    seed=2,
+    seed=1,
     )
 
 # Initialize the baseline
-mean_rwd = participant.initialize_baseline(env, n_trials=1)
+bsl_states, bsl_rewards = participant.initialize_baseline(env, n_trials=100)
+ax = plot_value_function(participant.V, participant)
+ax.plot(bsl_states, bsl_rewards, 'o', label='Sampled rewards')
 
+# plot initial policy
+plot_policy(participant)
+
+# %%
 # Run learning for 2000 trials
-n_trials = 100
+n_trials = 1000
 #n_basis = 36
 actions = np.zeros((n_trials, 4))
 target_angles = np.zeros(n_trials)
 rewards = np.zeros(n_trials)
 nus     = np.zeros((n_trials, 4))   # <-- store log‐eigs
-rwd_baselines = np.zeros(n_trials)
 W_pres = np.zeros((n_trials, 4,participant.n_basis))
 W_posts = np.zeros((n_trials, 4, participant.n_basis))
+Vs = np.zeros((n_trials, 4, participant.n_basis))
 
 
 for trial in range(n_trials):
     # store variables (for later plotting)
-    rwd_baselines[trial] = participant.rwd_baseline
+    Vs[trial] = participant.V.copy()
     W_pres[trial] = participant.W.copy()
     
+
     # Get new target angle
     s = env.reset()
     target_angles[trial]=s
@@ -62,7 +70,8 @@ for trial in range(n_trials):
     W_posts[trial] = participant.W.copy()
     actions[trial] = a
     rewards[trial] = r
-    nus[trial]     = participant.nu   # <-- copy current ν
+    nus[trial]     = participant.nu.copy()   # <-- copy current ν
+
     
 
 # %% plot outcome

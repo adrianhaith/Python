@@ -224,4 +224,73 @@ def plot_policy_update(W_pre, W_post, nu, target_angle, learner,
     plt.tight_layout()
     plt.show()
 
+
+def plot_value_function(V, learner, n_points=200):
+    """
+    Visualize the state-dependent value function b(s) = Vᵀ * phi(s)
+
+    Parameters:
+        V       : (n_basis,) array of baseline weights
+        learner : CursorControlLearner instance (for compute_basis)
+        n_points: number of angle samples between 0 and 2π
+    """
+    angles = np.linspace(0, 2 * np.pi, n_points)
+    values = np.zeros_like(angles)
+
+    for i, s in enumerate(angles):
+        phi = learner.compute_basis(s)
+        values[i] = V @ phi
+
+    fig, ax = plt.subplots(figsize=(6, 3))
+    ax.plot(angles, values, label='Baseline b(s)')
+    ax.set_xlabel("Target angle (radians)")
+    ax.set_ylabel("Estimated reward baseline")
+    ax.set_title("State-Dependent Reward Baseline")
+    ax.grid(True)
+    ax.legend()
+
+    return ax
     
+
+def plot_policy(learner, r=0.12, n_points=200):
+    """
+    Visualizes the policy
+    
+    Arguments:
+        learner: CursorControlLearner object (to access basis function logic)
+        r: radius of the target ring
+        n_points: number of target angles to evaluate
+    """
+    angles = np.linspace(0, 2 * np.pi, n_points)
+    phi_matrix = np.array([learner.compute_basis(s) for s in angles])  # (n_points, n_basis)
+
+    mu = phi_matrix @ learner.W.T    # (n_points, 4)
+
+    ideal_Ly = r * np.cos(angles)
+    ideal_Rx = r * np.sin(angles)
+
+    fig, axs = plt.subplots(1, 2, figsize=(8, 3), sharex=True)
+
+    # Ly = cursor x control
+    axs[0].plot(angles, mu[:, 1], label='mean', color='blue')
+    axs[0].plot(angles, ideal_Ly, '--', label='Ideal', color='black')
+    axs[0].set_title("Left Hand Y (Ly)")
+    axs[0].set_ylabel("Ly displacement (cursor x)")
+    axs[0].grid(True)
+    axs[0].legend()
+
+    # Rx = cursor y control
+    axs[1].plot(angles, mu[:, 2], label='mean', color='blue')
+    axs[1].plot(angles, ideal_Rx, '--', label='Ideal', color='black')
+    axs[1].set_title("Right Hand X (Rx)")
+    axs[1].set_ylabel("Rx displacement (cursor y)")
+    axs[1].grid(True)
+    axs[1].legend()
+
+    for ax in axs:
+        ax.set_xlabel("Target angle (radians)")
+        ax.set_xlim(0, 2 * np.pi)
+
+    plt.suptitle("Current Policy")
+    plt.tight_layout()
+    plt.show()
