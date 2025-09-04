@@ -159,7 +159,7 @@ from visualization import CursorLearningVisualizer
 
 viz = CursorLearningVisualizer(participant, env, history)
 
-tt=416
+tt=998
 viz.plot_snapshot(tt)
 viz.plot_value_function(tt)
 viz.plot_policy_update(tt)

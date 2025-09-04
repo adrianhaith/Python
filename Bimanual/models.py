@@ -99,11 +99,28 @@ class CursorControlLearner:
         # Value-function update: weight the 
         self.V += (1 - self.baseline_decay) * adv * phi  # update value function by gradient descent
 
+        # W-update
         delta = action - mu
         grad_W = np.outer(delta / (sigma**2), phi) * adv
+
+        # clip updates according to PPO-based upper bound on change in mean
+        for i in range(4):
+            # Compute proposed update for this row of W
+            delta_w_i = self.alpha * grad_W[i]  # shape (n_basis,)
+            
+            # Compute the corresponding change in mean action
+            delta_mu_i = delta_w_i @ phi        # scalar
+            
+            # PPO-style bound
+            max_step = self.epsilon * (sigma[i]**2) / abs(action[i] - mu[i] + 1e-8)  # add epsilon for stability
+
+            if abs(delta_mu_i) > max_step:
+                scale = max_step / abs(delta_mu_i)
+                delta_w_i *= scale  # scale the update to satisfy constraint
+
+            self.W[i] += delta_w_i
+
         grad_nu = ((delta**2) / (sigma**2) - 1) * adv
-        
-        self.W += self.alpha * grad_W
         self.nu += self.alpha_nu * grad_nu
 
     def initialize_baseline(self, env, n_trials=100):
