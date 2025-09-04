@@ -24,9 +24,9 @@ env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.01,
-    alpha_nu=0.01,
-    sigma=.05,
+    alpha=0.05,
+    alpha_nu=0.05,
+    sigma=.03,
     seed=1,
     baseline_decay=0.95,
     )
@@ -41,7 +41,7 @@ plot_policy(participant)
 
 # %%
 # Run learning for 2000 trials
-n_trials = 1000
+n_trials = 5000
 #n_basis = 36
 history = {
     'target_angles': np.zeros(n_trials),
