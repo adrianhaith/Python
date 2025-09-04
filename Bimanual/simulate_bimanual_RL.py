@@ -16,16 +16,19 @@ import matplotlib.pyplot as plt
 from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_task_snapshot, plot_policy_update, plot_learning_progress, make_animation, plot_value_function, plot_policy
 
+np.random.seed(1)
+
 # % Simulate learning
 # Create environment
 env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.02,
-    alpha_nu=0.02,
+    alpha=0.01,
+    alpha_nu=0.01,
     sigma=.05,
     seed=1,
+    baseline_decay=0.95,
     )
 
 # Initialize the baseline
@@ -46,7 +49,7 @@ rewards = np.zeros(n_trials)
 nus     = np.zeros((n_trials, 4))   # <-- store log‐eigs
 W_pres = np.zeros((n_trials, 4,participant.n_basis))
 W_posts = np.zeros((n_trials, 4, participant.n_basis))
-Vs = np.zeros((n_trials, 4, participant.n_basis))
+Vs = np.zeros((n_trials, participant.n_basis))
 
 
 for trial in range(n_trials):
@@ -149,3 +152,11 @@ plt.show()
 plot_learning_progress(actions, target_angles)
 
 anim = make_animation(actions,target_angles, save_path="cursor_learning.mp4")
+
+# %% -Figure out early learning
+tt=416
+plot_task_snapshot(target_angles[tt],actions[tt])
+plot_policy_update(W_pres[tt],W_posts[tt],target_angles[tt],participant,action=actions[tt])
+ax = plot_value_function(Vs[tt],participant)
+ax.plot(target_angles[tt],rewards[tt], 'o', label='Sampled rewards')
+# %%

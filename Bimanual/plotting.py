@@ -57,7 +57,7 @@ def plot_task_snapshot(target_angle, action, radius=0.12, n_targets=8, cmap=plt.
     
     
     
-def plot_learning_progress(actions, target_angles, radius=1, cmap=plt.cm.hsv):
+def plot_learning_progress(actions, target_angles, radius=.12, cmap=plt.cm.hsv):
     n_trials = len(actions)
     thirds = np.array_split(np.arange(n_trials), 3)
 
@@ -160,7 +160,7 @@ def make_animation(actions, target_angles, radius=1, cmap=plt.cm.hsv,
     
 # now, define a function to plot the policy pre vs post a given trial
 
-def plot_policy_update(W_pre, W_post, nu, target_angle, learner, 
+def plot_policy_update(W_pre, W_post, target_angle, learner, 
                        action=None, r=0.12, n_points=200):
     """
     Visualizes the policy before and after an update, with target and cursor endpoint.
@@ -201,7 +201,7 @@ def plot_policy_update(W_pre, W_post, nu, target_angle, learner,
     axs[0].set_title("Left Hand Y (Ly)")
     axs[0].set_ylabel("Ly displacement (cursor x)")
     axs[0].grid(True)
-    axs[0].legend()
+    #axs[0].legend()
 
     # Rx = cursor y control
     axs[1].plot(angles, mu_pre[:, 2], label='Pre-update', color='gray')
@@ -214,7 +214,7 @@ def plot_policy_update(W_pre, W_post, nu, target_angle, learner,
     axs[1].set_title("Right Hand X (Rx)")
     axs[1].set_ylabel("Rx displacement (cursor y)")
     axs[1].grid(True)
-    axs[1].legend()
+    #axs[1].legend()
 
     for ax in axs:
         ax.set_xlabel("Target angle (radians)")

@@ -116,7 +116,6 @@ class CursorControlLearner:
             actions.append(a)
             activations.append(phi)
             states.append(s)
-            print(s)
 
         Phi = np.stack(activations)
         R = np.array(rewards)
