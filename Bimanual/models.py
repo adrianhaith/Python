@@ -13,7 +13,7 @@ import numpy as np
 # define the skittles environment class
 
 class CursorControlEnv:
-    def __init__(self, radius=0.12):
+    def __init__(self, radius=0.12, discrete_targs=True):
         self.radius = radius
         self.target_angles = np.linspace(0, 2 * np.pi, 8, endpoint=False)
         u_range = (-2*radius, 2*radius)
@@ -22,10 +22,15 @@ class CursorControlEnv:
         self.observation_space = np.array([0.0, 2*np.pi])  # Target angle index
         self.state = None
         self.target_pos = None
+        self.discrete = discrete_targs
 
     def reset(self):
-        idx = np.random.randint(len(self.target_angles))
-        angle = self.target_angles[idx]
+        if(self.discrete):
+            idx = np.random.randint(len(self.target_angles)) # discrete selection
+            angle = self.target_angles[idx]                  #. 
+        else:
+            angle = np.random.uniform(0, 2 * np.pi)
+
         self.state = angle
         self.target_pos = self.radius * np.array([np.cos(angle), np.sin(angle)])
         return angle  # angle is the state
@@ -37,7 +42,7 @@ class CursorControlEnv:
         cursor_y = Rx  # controlled by R_x
         cursor_pos = np.array([cursor_x, cursor_y])
         error = np.linalg.norm(cursor_pos - self.target_pos)
-        reward = -np.linalg.norm(error)
+        reward = -np.linalg.norm(error) ** 2
 
         # Compute directional error
         targ_ang = np.atan2(self.target_pos[1],self.target_pos[0])
@@ -78,7 +83,7 @@ class CursorControlLearner:
                  seed=None, 
                  baseline_decay=0.99,
                  radius=.12,
-                 epsilon=0.1 # clipping threshold for PPO-like stabilization
+                 epsilon=0.3 # clipping threshold for PPO-like stabilization
                 ):
         self.n_basis = n_basis
         self.kappa = kappa

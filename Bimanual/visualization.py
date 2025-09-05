@@ -7,6 +7,7 @@ class CursorLearningVisualizer:
         self.env = env
         self.history = history
         self.n_basis = learner.n_basis
+        self.n_trials = np.shape(history['actions'])[0]
         self.radius = env.radius
         self.target_angles = env.target_angles
         self.cmap = cmap
@@ -143,5 +144,57 @@ class CursorLearningVisualizer:
             ax.set_xlim(0, 2 * np.pi)
 
         plt.suptitle(f"Policy Before and After Update (Trial {trial_idx})")
+        plt.tight_layout()
+        plt.show()
+
+    
+
+    def plot_learning_progress(self, starts=[0, 500, 1000], window=200, cmap=plt.cm.hsv):
+        """
+        Plots snapshots of learning progress over fixed trial windows.
+        
+        Parameters:
+            starts: list of starting trial indices
+            window: number of trials to include in each snapshot
+            cmap: colormap for angle-to-color mapping
+        """
+        n_panels = len(starts)
+        target_angles = self.history['target_angles']
+        actions = self.history['actions']
+
+        # Canonical targets for visual context
+        canonical_angles = np.linspace(0, 2 * np.pi, len(np.unique(target_angles)), endpoint=False)
+        target_locs = np.stack([np.cos(canonical_angles), np.sin(canonical_angles)], axis=1) * self.env.radius
+
+        def angle_to_color(angle):
+            return cmap((angle % (2 * np.pi)) / (2 * np.pi))
+
+        fig, axs = plt.subplots(1, n_panels, figsize=(3 * n_panels, 3))
+        
+        if n_panels == 1:
+            axs = [axs]  # make iterable even for single plot
+
+        for i, start in enumerate(starts):
+            ax = axs[i]
+            trial_indices = np.arange(start, min(start + window, self.n_trials))
+            ax.set_title(f"Trials {start}–{start + window}")
+
+            # Plot center
+            ax.plot(0, 0, 'ko', markersize=3)
+
+            # Plot canonical target positions
+            for angle, (x, y) in zip(canonical_angles, target_locs):
+                ax.plot(x, y, 'o', color=angle_to_color(angle), markersize=6)
+
+            # Plot cursor endpoints for this window
+            for t in trial_indices:
+                angle = target_angles[t]
+                action = actions[t]
+                endpoint = [action[1], action[2]]  # Ly, Rx
+                ax.plot(*endpoint, 'o', color=angle_to_color(angle), markersize=2, alpha=0.6)
+
+            ax.set_aspect('equal')
+            ax.axis('off')
+
         plt.tight_layout()
         plt.show()
