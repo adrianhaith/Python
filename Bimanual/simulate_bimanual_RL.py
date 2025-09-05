@@ -15,8 +15,9 @@ import matplotlib.pyplot as plt
 
 from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_task_snapshot, plot_policy_update, plot_learning_progress, make_animation, plot_value_function, plot_policy
+from visualization import CursorLearningVisualizer
 
-np.random.seed(1)
+np.random.seed(2)
 
 # % Simulate learning
 # Create environment
@@ -24,9 +25,9 @@ env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.05,
-    alpha_nu=0.05,
-    sigma=.03,
+    alpha=0.0005,
+    alpha_nu=0.0005,
+    sigma=.02,
     seed=1,
     baseline_decay=0.95,
     )
@@ -41,7 +42,7 @@ plot_policy(participant)
 
 # %%
 # Run learning for 2000 trials
-n_trials = 5000
+n_trials = 2400
 #n_basis = 36
 history = {
     'target_angles': np.zeros(n_trials),
@@ -49,7 +50,8 @@ history = {
     'rewards': np.zeros(n_trials),
     'Ws': np.zeros((n_trials, 4, participant.n_basis)),
     'nus': np.zeros((n_trials, 4)),
-    'Vs': np.zeros((n_trials, participant.n_basis))
+    'Vs': np.zeros((n_trials, participant.n_basis)),
+    'abs_dir_errors': np.zeros(n_trials)
 }
 
 for trial in range(n_trials):
@@ -64,7 +66,7 @@ for trial in range(n_trials):
     
     # Sample action and get reward
     a, mu, sigma, phi = participant.sample_action(s)
-    _, r, _, _ = env.step(a)
+    _, r, _, info = env.step(a)
     
     # Update learner
     participant.update(a, mu, sigma, phi, r)
@@ -72,8 +74,22 @@ for trial in range(n_trials):
     # Store data for this trial
     history['actions'][trial] = a
     history['rewards'][trial] = r
+    history['abs_dir_errors'][trial] = info['abs_directional_error']
 
-# %% plot outcome
+
+
+# %% ------plot learning time course------
+#---------------------
+
+def bin_data(array, bin_size=60):
+    """
+    Returns average values of input array binned into bins of size block_size
+    """
+    n_bins = len(array) // bin_size
+    trimmed = array[:n_bins * bin_size]  # drop incomplete final block
+    binned = trimmed.reshape(n_bins, bin_size).mean(axis=1)
+    return binned, n_bins, bin_size
+
 time = np.arange(n_trials)
 action_labels = ['Lx', 'Ly', 'Rx', 'Ry']
 
@@ -81,85 +97,75 @@ action_labels = ['Lx', 'Ly', 'Rx', 'Ry']
 stds = np.exp(history['nus'])  # shape (n_trials, 4)
 
 # Plotting
-fig, axs = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
+fig, axs = plt.subplots(4, 1, figsize=(6, 8), sharex=True)
+
+bin_size = 60
+rwd_binned, n_bins, _ = bin_data(history['rewards'], bin_size=bin_size)
+bin_centers = bin_size*(np.arange(n_bins)+.5)
 
 # Top panel: Rewards
-axs[0].plot(time, history['rewards'], label='Reward')
+axs[0].plot(bin_centers, rwd_binned, marker='o', label='Reward')
 axs[0].set_ylabel("Reward")
 axs[0].set_title("Learning performance")
 axs[0].grid(True)
 
 # Middle panel: Actions
 for i in range(4):
-    axs[1].plot(time, history['actions'][:, i], label=action_labels[i])
+    action_binned, _, _ = bin_data(history['actions'][:, i], bin_size=bin_size)
+    axs[1].plot(bin_centers, action_binned, marker='o', label=action_labels[i])
 axs[1].set_ylabel("Action values")
 axs[1].legend()
 axs[1].grid(True)
 
-# Bottom panel: Standard deviations (sqrt eigenvalues)
+# Standard deviations (sqrt eigenvalues)
+
 for i in range(4):
-    axs[2].plot(time, stds[:, i], label=action_labels[i])
+    std_binned, _, _ = bin_data(np.exp(history['nus'][:, i]), bin_size=bin_size)
+    axs[2].plot(bin_centers, std_binned, marker='o', label=action_labels[i])
 axs[2].set_ylabel("Std Dev")
 axs[2].set_xlabel("Trial")
 axs[2].legend()
 axs[2].grid(True)
 
+# absolute direction error - for comparison with human data
+dir_errors_binned, _, _ = bin_data(np.rad2deg(history['abs_dir_errors']), bin_size=bin_size)
+axs[3].plot(bin_centers, dir_errors_binned, marker='o', label='|directional_error|')
+axs[3].set_xlabel("Trial")
+axs[3].set_ylabel("Absolute Directional Error")
+axs[3].legend()
+axs[3].grid(True)
 plt.tight_layout()
 plt.show()
 
-# %% Visualize trial endpoints
-trial_range = range(0, n_trials)
-cmap = plt.cm.hsv  # Cyclic colormap
+# %% log-log plot
 
-# Determine number of targets automatically
-n_targets = len(np.unique(history['target_angles']))
-canonical_angles = np.linspace(0, 2 * np.pi, n_targets, endpoint=False)
-
-# Normalize angle to [0, 1) for color mapping
-def angle_to_color(angle):
-    return cmap((angle % (2 * np.pi)) / (2 * np.pi))
-
-# Begin plot
-fig, ax = plt.subplots(figsize=(3, 3))
-
-# Plot central start position
-ax.plot(0, 0, 'ko', markersize=4)
-
-# Plot targets
-for angle in canonical_angles:
-    x, y = env.radius * np.cos(angle), env.radius * np.sin(angle)
-    ax.plot(x, y, 'o', color=angle_to_color(angle), markersize=8)
-
-# Plot endpoints
-for t in trial_range:
-    a = history['actions'][t]
-    theta = history['target_angles'][t]
-    endpoint = [a[1], a[2]]  # Ly = cursor x, Rx = cursor y
-    ax.plot(*endpoint, 'o', color=angle_to_color(theta), markersize=3, alpha=0.6)
-
-# Aesthetic adjustments
-ax.set_aspect('equal')
-#ax.axis('off')  # Hide all axis lines, ticks, and labels
+plt.figure(figsize=(5, 4))
+plt.loglog(bin_centers, dir_errors_binned, marker='o', label='Directional Error')
+plt.xlabel('Trial Number')
+plt.ylabel('Directional Error (radians)')
+plt.title('Learning Curve (log-log)')
+plt.grid(True, which='both')
+plt.legend()
 plt.tight_layout()
 plt.show()
 
 # %% plot early/mid/late learning
 plot_learning_progress(history['actions'], history['target_angles'])
 
-anim = make_animation(history['actions'],history['target_angles'], save_path="cursor_learning.mp4")
+#anim = make_animation(history['actions'],history['target_angles'], save_path="cursor_learning.mp4")
 
 # %% -Figure out early learning
-tt=416
-plot_task_snapshot(history['target_angles'][tt],history['actions'][tt])
-plot_policy_update(history['Ws'][tt],history['Ws'][tt+1],history['target_angles'][tt],participant,action=history['actions'][tt])
-ax = plot_value_function(history['Vs'][tt],participant)
-ax.plot(history['target_angles'][tt],history['rewards'][tt], 'o', label='Sampled rewards')
+#tt=416
+#plot_task_snapshot(history['target_angles'][tt],history['actions'][tt])
+#plot_policy_update(history['Ws'][tt],history['Ws'][tt+1],history['target_angles'][tt],participant,action=history['actions'][tt])
+#ax = plot_value_function(history['Vs'][tt],participant)
+#ax.plot(history['target_angles'][tt],history['rewards'][tt], 'o', label='Sampled rewards')
 # %%
-from visualization import CursorLearningVisualizer
+
 
 viz = CursorLearningVisualizer(participant, env, history)
 
-tt=998
+tt=1997
 viz.plot_snapshot(tt)
 viz.plot_value_function(tt)
 viz.plot_policy_update(tt)

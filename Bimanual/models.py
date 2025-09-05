@@ -38,7 +38,30 @@ class CursorControlEnv:
         cursor_pos = np.array([cursor_x, cursor_y])
         error = np.linalg.norm(cursor_pos - self.target_pos)
         reward = -np.linalg.norm(error)
-        return self.state, reward, True, {}
+
+        # Compute directional error
+        targ_ang = np.atan2(self.target_pos[1],self.target_pos[0])
+        reach_ang = np.atan2(cursor_pos[1],cursor_pos[0])
+        angular_error = targ_ang - reach_ang
+        abs_dir_error = np.abs(angular_error)
+
+        # alternative calculation of directional error
+        vec_target = self.target_pos
+        vec_actual = cursor_pos
+
+        dot = np.dot(vec_target, vec_actual)
+        norm_prod = np.linalg.norm(vec_target) * np.linalg.norm(vec_actual) + 1e-8  # avoid 0/0
+        cos_theta = np.clip(dot / norm_prod, -1.0, 1.0)
+        angular_error = np.arccos(cos_theta)  # radians
+        abs_dir_error = np.abs(angular_error)
+
+        info = {
+            'abs_directional_error': abs_dir_error,
+            'cursor_pos': cursor_pos.copy(),
+            'target_pos': self.target_pos.copy()
+        }
+
+        return self.state, reward, True, info
     
 from scipy.special import i0  # Bessel function of the first kind, order 0
 
@@ -62,9 +85,10 @@ class CursorControlLearner:
         self.alpha = alpha
         self.alpha_nu = alpha_nu
         self.rng = np.random.default_rng(seed)
+        self.radius = radius
 
         self.basis_centers = np.linspace(0, 2 * np.pi, n_basis, endpoint=False)
-        self.W = self.rng.normal(scale=sigma, size=(4, n_basis))
+        self.W = self.rng.normal(scale=self.radius/2, size=(4, n_basis))
 
         if init_nu is None:
             init_nu = np.log([sigma, sigma, sigma, sigma])
