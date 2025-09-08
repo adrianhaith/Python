@@ -72,7 +72,136 @@ from scipy.special import i0  # Bessel function of the first kind, order 0
 
 # define the learner class to model RL-based learning of the task
 
+
+import numpy as np
+
 class CursorControlLearner:
+    def __init__(self, 
+                 n_basis=36, 
+                 kappa=5.0, 
+                 alpha=0.01, 
+                 alpha_nu=0.01, 
+                 sigma=0.15,
+                 init_nu=None, 
+                 seed=None, 
+                 baseline_decay=0.99,
+                 radius=.12,
+                 epsilon=0.3 # clipping threshold for PPO-like stabilization
+                ):
+        self.n_basis = n_basis
+        self.kappa = kappa
+        self.alpha = alpha
+        self.alpha_nu = alpha_nu
+        self.rng = np.random.default_rng(seed)
+        self.radius = radius
+        self.init_std = sigma
+
+        self.basis_centers = np.linspace(0, 2 * np.pi, n_basis, endpoint=False)
+        self.W = self.rng.normal(scale=self.radius/4, size=(4, n_basis)) / self.init_std # divide by sigma to normalize
+
+        self.nu = np.array([0.0, 0.0, 0.0, 0.0])
+
+        self.V = np.zeros(self.n_basis)
+        self.baseline_decay = baseline_decay
+
+        self.epsilon = epsilon
+
+    def compute_basis(self, s):
+        diffs = s - self.basis_centers
+        unnormalized = np.exp(self.kappa * np.cos(diffs))
+        normalization = 2 * np.pi * i0(self.kappa)
+        return unnormalized / normalization  # shape (n_basis,)
+
+    def sample_action(self, s):
+        phi = self.compute_basis(s)            # (n_basis,)
+        mu_norm = self.W @ phi                      # (4,)
+        sigma_norm = np.exp(self.nu)                # (4,)
+        action_norm = self.rng.normal(mu_norm, sigma_norm)    # (4,)
+        return self.init_std*action_norm, self.init_std*mu_norm, self.init_std*sigma_norm, phi
+
+    def log_prob(self, a, mu, sigma):
+        # convert to normalized coordinates
+        a_norm = a/self.init_std
+        mu_norm = mu/self.init_std
+        sigma_norm = sigma/self.init_std
+        return -0.5 * np.sum(((a_norm - mu_norm) / sigma_norm) ** 2 + 2 * self.nu + np.log(2 * np.pi))
+
+    def update(self, a, mu, sigma, phi, reward):
+        # convert to normalized coordinates
+        a_norm = a/self.init_std
+        mu_norm = mu/self.init_std
+        sigma_norm = sigma/self.init_std
+
+        # Subtract baseline value to get advantage function
+        b = self.V @ phi
+        adv = reward - b
+        
+        # Value-function update: weight the 
+        self.V += (1 - self.baseline_decay) * adv * phi  # update value function by gradient descent
+
+        # W-update
+        delta = a_norm - mu_norm
+        grad_W = np.outer(delta / (sigma_norm**2), phi) * adv
+
+        # clip updates according to PPO-based upper bound on change in mean
+        for i in range(4):
+            # Compute proposed update for this row of W
+            delta_w_i = self.alpha * grad_W[i]  # shape (n_basis,)
+            
+            # Compute the corresponding change in mean action
+            delta_mu_i = delta_w_i @ phi        # scalar
+            
+            # PPO-style bound
+            max_step = self.epsilon * (sigma_norm[i]**2) / abs(a_norm[i] - mu_norm[i] + 1e-8)  # add epsilon for stability
+
+            if abs(delta_mu_i) > max_step:
+                scale = max_step / abs(delta_mu_i)
+                delta_w_i *= scale  # scale the update to satisfy constraint
+
+            self.W[i] += delta_w_i
+
+        grad_nu = ((delta**2) / (sigma_norm**2) - 1) 
+        self.nu += self.alpha_nu * grad_nu * adv
+
+    def initialize_baseline(self, env, n_trials=100):
+        activations = [] # basis activations across trials
+        rewards = []
+        actions = []
+        states = []
+        for t in range(n_trials):
+            s = env.reset()
+            a, mu, sigma, phi = self.sample_action(s)
+            _, r, _, _ = env.step(a)
+            rewards.append(r)
+            actions.append(a)
+            activations.append(phi)
+            states.append(s)
+
+        Phi = np.stack(activations)
+        R = np.array(rewards)
+        self.V = np.linalg.lstsq(Phi, R, rcond=None)[0]
+        return states, rewards, actions
+        
+
+    def evaluate_policy_over_angles(self, n_points=100):
+        """
+        Returns:
+            angles: array of target angles (radians)
+            means: array of shape (n_points, 4) with policy means at each angle
+        """
+        angles = np.linspace(0, 2 * np.pi, n_points)
+        means = np.zeros((n_points, 4))
+
+        for i, angle in enumerate(angles):
+            phi = self.compute_basis(angle)
+            mu_norm = self.W @ phi  # (4,)
+            means[i] = mu_norm*self.init_std
+            
+        return angles, means
+
+
+
+class CursorControlLearner_unnormalized:
     def __init__(self, 
                  n_basis=36, 
                  kappa=5.0, 

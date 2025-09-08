@@ -27,20 +27,20 @@ env = CursorControlEnv(radius=.12)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=0.01,
-    alpha_nu=0.4,
+    alpha=.1,
+    alpha_nu=0.1,
     sigma=.05,
     seed=1,
     baseline_decay=0.95,
     )
 
 # Initialize the baseline
-bsl_states, bsl_rewards = participant.initialize_baseline(env, n_trials=100)
+bsl_states, bsl_rewards, actions = participant.initialize_baseline(env, n_trials=100)
 ax = plot_value_function(participant.V, participant)
 ax.plot(bsl_states, bsl_rewards, 'o', label='Sampled rewards')
 
 # plot initial policy
-plot_policy(participant)
+mu_init = plot_policy(participant)
 
 # %%
 # Run learning for 2000 trials

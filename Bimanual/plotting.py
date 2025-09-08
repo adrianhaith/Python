@@ -264,7 +264,7 @@ def plot_policy(learner, r=0.12, n_points=200):
     angles = np.linspace(0, 2 * np.pi, n_points)
     phi_matrix = np.array([learner.compute_basis(s) for s in angles])  # (n_points, n_basis)
 
-    mu = phi_matrix @ learner.W.T    # (n_points, 4)
+    mu = learner.init_std * phi_matrix @ learner.W.T    # (n_points, 4)
 
     ideal_Ly = r * np.cos(angles)
     ideal_Rx = r * np.sin(angles)
@@ -294,3 +294,5 @@ def plot_policy(learner, r=0.12, n_points=200):
     plt.suptitle("Current Policy")
     plt.tight_layout()
     plt.show()
+
+    return mu

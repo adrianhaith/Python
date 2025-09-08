@@ -15,8 +15,8 @@ def run_simulation(n_trials=2100, seed=0):
 
     env = CursorControlEnv(radius=.12)
     learner = CursorControlLearner(
-        alpha=0.005,
-        alpha_nu=0.4,
+        alpha=0.1,
+        alpha_nu=0.1,
         sigma=.05,
         seed=seed,
         baseline_decay=0.95,
