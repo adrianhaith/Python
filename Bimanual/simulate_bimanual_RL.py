@@ -29,7 +29,7 @@ env = CursorControlEnv(radius=.12)
 participant = CursorControlLearner(
     alpha=0.01,
     alpha_nu=0.4,
-    sigma=.025,
+    sigma=.05,
     seed=1,
     baseline_decay=0.95,
     )

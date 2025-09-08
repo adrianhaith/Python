@@ -42,7 +42,7 @@ class CursorControlEnv:
         cursor_y = Rx  # controlled by R_x
         cursor_pos = np.array([cursor_x, cursor_y])
         error = np.linalg.norm(cursor_pos - self.target_pos)
-        reward = -np.linalg.norm(error) ** 2
+        reward = -np.linalg.norm(error)
 
         # Compute directional error
         targ_ang = np.atan2(self.target_pos[1],self.target_pos[0])
@@ -149,8 +149,8 @@ class CursorControlLearner:
 
             self.W[i] += delta_w_i
 
-        grad_nu = ((delta**2) / (sigma**2) - 1) * adv
-        self.nu += self.alpha_nu * grad_nu
+        grad_nu = ((delta**2) / (sigma**2) - 1) 
+        self.nu += self.alpha_nu * grad_nu * adv
 
     def initialize_baseline(self, env, n_trials=100):
         activations = [] # basis activations across trials
