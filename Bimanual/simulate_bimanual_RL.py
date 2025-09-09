@@ -19,16 +19,16 @@ from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_value_function, plot_policy
 from visualization import CursorLearningVisualizer
 
-np.random.seed(4)
+np.random.seed(1)
 
 # % Simulate learning
 # Create environment
-env = CursorControlEnv(radius=.12)
+env = CursorControlEnv(radius=.12, motor_noise_std=.05)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=.1,
-    alpha_nu=0.1,
+    alpha=.08,
+    alpha_nu=0.08,
     sigma=.05,
     seed=1,
     baseline_decay=0.95,
@@ -44,7 +44,7 @@ mu_init = plot_policy(participant)
 
 # %%
 # Run learning for 2000 trials
-n_trials = 2100
+n_trials = 2600
 #n_basis = 36
 history = {
     'target_angles': np.zeros(n_trials),
@@ -167,9 +167,9 @@ if(1):
 viz = CursorLearningVisualizer(participant, env, history)
 
 tt=1997
-#viz.plot_snapshot(tt)
+viz.plot_snapshot(2000)
 #viz.plot_value_function(tt)
-viz.plot_policy_update(tt)
+viz.plot_policy_update(participant, tt)
 viz.plot_learning_progress([0,700, 1800], window=300)
 
 plt.savefig("endpoint_convergence.svg", format="svg", bbox_inches='tight')

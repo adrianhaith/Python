@@ -13,10 +13,10 @@ def run_simulation(n_trials=2100, seed=0):
 
     np.random.seed(2*seed)
 
-    env = CursorControlEnv(radius=.12)
+    env = CursorControlEnv(radius=.12, motor_noise_std=.05)
     learner = CursorControlLearner(
-        alpha=0.1,
-        alpha_nu=0.1,
+        alpha=0.08,
+        alpha_nu=0.08,
         sigma=.05,
         seed=seed,
         baseline_decay=0.95,
@@ -55,8 +55,8 @@ def bin_data(array, bin_size=60):
 
 
 # %% run multiple simulations
-n_runs = 10
-n_trials = 2100
+n_runs = 20
+n_trials = 2600
 bin_size = 60
 
 all_rewards = []
@@ -77,30 +77,33 @@ all_dir_errors = np.stack(all_dir_errors)
 # Compute mean and SEM
 mean_rwd = np.mean(all_rewards, axis=0)
 sem_rwd = np.std(all_rewards, axis=0) / np.sqrt(n_runs)
+std_rwd = np.std(all_rewards, axis=0)
 
 mean_dir = np.mean(all_dir_errors, axis=0)
 sem_dir = np.std(all_dir_errors, axis=0) / np.sqrt(n_runs)
+std_dir = np.std(all_dir_errors, axis=0)
 
 bin_centers = bin_size * (np.arange(all_rewards.shape[1]) + 0.5)
 
 # %% plot outcomes
 
-plt.figure(figsize=(6, 4))
+plt.figure(figsize=(4, 4))
+
 
 plt.subplot(2,1,1)
-plt.plot(bin_centers, mean_rwd, label='Reward')
-plt.fill_between(bin_centers, mean_rwd - sem_rwd, mean_rwd + sem_rwd, alpha=0.3)
+#plt.plot(bin_centers, mean_rwd, label='Reward')
+plt.loglog(bin_centers,mean_dir)
+plt.fill_between(bin_centers, mean_rwd - std_rwd, mean_rwd + std_rwd, alpha=0.3)
 plt.ylabel("Reward")
 plt.title("Learning performance (average of multiple runs)")
 
 plt.subplot(2,1,2)
 plt.plot(bin_centers, mean_dir, label='|directional error|')
-plt.fill_between(bin_centers, mean_dir - sem_dir, mean_dir + sem_dir, alpha=0.3)
+plt.fill_between(bin_centers, mean_dir - std_dir, mean_dir + std_dir, alpha=0.3)
 plt.ylabel("Directional Error (deg)")
 plt.xlabel("Trial")
 plt.yticks([0, 30, 60, 90])
-
 plt.tight_layout()
+plt.savefig("averaged_learning_curve.svg", format="svg", bbox_inches='tight')
+plt.grid(True)
 plt.show()
-
-# %%

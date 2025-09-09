@@ -94,7 +94,7 @@ class CursorLearningVisualizer:
         plt.show()
 
 
-    def plot_policy_update(self, trial_idx, r=0.12, n_points=200):
+    def plot_policy_update(self, learner, trial_idx, r=0.12, n_points=200):
         """
         Plot the pre- vs post-update policy around a given trial.
         """
@@ -106,8 +106,8 @@ class CursorLearningVisualizer:
         angles = np.linspace(0, 2 * np.pi, n_points)
         phi_matrix = np.array([self.learner.compute_basis(s) for s in angles])
 
-        mu_pre = phi_matrix @ W_pre.T
-        mu_post = phi_matrix @ W_post.T
+        mu_pre = learner.init_std * phi_matrix @ W_pre.T
+        mu_post = learner.init_std * phi_matrix @ W_post.T
 
         ideal_Ly = r * np.cos(angles)
         ideal_Rx = r * np.sin(angles)

@@ -13,7 +13,7 @@ import numpy as np
 # define the skittles environment class
 
 class CursorControlEnv:
-    def __init__(self, radius=0.12, discrete_targs=True):
+    def __init__(self, radius=0.12, discrete_targs=True, motor_noise_std=.1, seed=1):
         self.radius = radius
         self.target_angles = np.linspace(0, 2 * np.pi, 8, endpoint=False)
         u_range = (-2*radius, 2*radius)
@@ -23,6 +23,12 @@ class CursorControlEnv:
         self.state = None
         self.target_pos = None
         self.discrete = discrete_targs
+        if(motor_noise_std is None):
+            self.motor_noise_std = radius*.1 # default at 10% of distance to target
+        else:
+            self.motor_noise_std = motor_noise_std
+            
+        self.rng = np.random.default_rng(seed) # random number generator for motor noise
 
     def reset(self):
         if(self.discrete):
@@ -41,7 +47,8 @@ class CursorControlEnv:
         cursor_x = Ly  # controlled by L_y
         cursor_y = Rx  # controlled by R_x
         cursor_pos = np.array([cursor_x, cursor_y])
-        error = np.linalg.norm(cursor_pos - self.target_pos)
+        motor_noise = self.rng.normal([0, 0], [self.motor_noise_std, self.motor_noise_std])
+        error = np.linalg.norm(cursor_pos + motor_noise - self.target_pos)
         reward = -np.linalg.norm(error)
 
         # Compute directional error

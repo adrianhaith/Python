@@ -177,8 +177,8 @@ def plot_policy_update(W_pre, W_post, target_angle, learner,
     angles = np.linspace(0, 2 * np.pi, n_points)
     phi_matrix = np.array([learner.compute_basis(s) for s in angles])  # (n_points, n_basis)
 
-    mu_pre = phi_matrix @ W_pre.T    # (n_points, 4)
-    mu_post = phi_matrix @ W_post.T  # (n_points, 4)
+    mu_pre = learner.init_std * phi_matrix @ W_pre.T    # (n_points, 4)
+    mu_post = learner.init_std * phi_matrix @ W_post.T  # (n_points, 4)
 
     ideal_Ly = r * np.cos(angles)
     ideal_Rx = r * np.sin(angles)
