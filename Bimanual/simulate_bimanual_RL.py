@@ -23,19 +23,21 @@ np.random.seed(1)
 
 # % Simulate learning
 # Create environment
-env = CursorControlEnv(radius=.12, motor_noise_std=.05)
+env = CursorControlEnv(radius=.12, motor_noise_std=.075, discrete_targs=False)
 
 # Create learner
 participant = CursorControlLearner(
-    alpha=.08,
-    alpha_nu=0.08,
+    alpha=.1,
+    alpha_nu=0.1,
     sigma=.05,
-    seed=1,
+    seed=11,
     baseline_decay=0.95,
+    kappa=5,
+    epsilon=0.5
     )
 
 # Initialize the baseline
-bsl_states, bsl_rewards, actions = participant.initialize_baseline(env, n_trials=100)
+bsl_states, bsl_rewards, actions = participant.initialize_baseline(env, n_trials=1000)
 ax = plot_value_function(participant.V, participant)
 ax.plot(bsl_states, bsl_rewards, 'o', label='Sampled rewards')
 
@@ -174,4 +176,14 @@ viz.plot_learning_progress([0,700, 1800], window=300)
 
 plt.savefig("endpoint_convergence.svg", format="svg", bbox_inches='tight')
 
-# %%
+# %% plot a snapshot using specified target angles
+
+target_angles = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+viz.plot_snapshot_with_samples(trial_idx=0, n_samples=10)
+plt.savefig("endpoints_early.svg", format="svg", bbox_inches='tight')
+
+viz.plot_snapshot_with_samples(trial_idx=1000, n_samples=10)
+plt.savefig("endpoints_mid.svg", format="svg", bbox_inches='tight')
+
+viz.plot_snapshot_with_samples(trial_idx=2599, n_samples=10)
+plt.savefig("endpoints_late.svg", format="svg", bbox_inches='tight')

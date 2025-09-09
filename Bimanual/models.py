@@ -84,7 +84,7 @@ import numpy as np
 
 class CursorControlLearner:
     def __init__(self, 
-                 n_basis=36, 
+                 n_basis=16, 
                  kappa=5.0, 
                  alpha=0.01, 
                  alpha_nu=0.01, 
@@ -93,7 +93,7 @@ class CursorControlLearner:
                  seed=None, 
                  baseline_decay=0.99,
                  radius=.12,
-                 epsilon=0.3 # clipping threshold for PPO-like stabilization
+                 epsilon=0.2 # clipping threshold for PPO-like stabilization
                 ):
         self.n_basis = n_basis
         self.kappa = kappa

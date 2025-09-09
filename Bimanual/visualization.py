@@ -62,6 +62,52 @@ class CursorLearningVisualizer:
         plt.tight_layout()
         plt.show()
 
+    def plot_snapshot_with_samples(self, trial_idx, target_angles=None, n_samples=1):
+        """
+        Plot policy snapshot at a given trial, and simulate sampled actions
+        for a given set of target angles.
+
+        Parameters:
+            trial_idx: int, trial index to pull weights from
+            target_angles: list of angles to probe (default: canonical 8)
+            n_samples: number of actions to sample per target
+        """
+        if target_angles is None:
+            target_angles = np.linspace(0, 2 * np.pi, 8, endpoint=False)
+
+        W = self.history['Ws'][trial_idx]
+        nu = self.history['nus'][trial_idx]
+        sigma = self.learner.init_std * np.exp(nu)
+
+        fig, ax = plt.subplots(figsize=(3, 3))
+        ax.plot(0, 0, 'ko', markersize=4)  # start position
+
+        for angle in target_angles:
+            phi = self.learner.compute_basis(angle)
+            mu_norm = W @ phi
+            mu = self.learner.init_std * mu_norm
+
+            # Plot mean action in task space (Ly → x, Rx → y)
+            cursor_xy = [mu[1], mu[2]]
+            target_xy = self.env.radius * np.array([np.cos(angle), np.sin(angle)])
+            color = self.angle_to_color(angle)
+
+            ax.plot(*target_xy, 'o', color=color, markersize=15)
+            #ax.plot(*cursor_xy, 'x', color=color, markersize=5, label='Mean')
+
+            # Sample and plot actions
+            for _ in range(n_samples):
+                a_sample = self.learner.rng.normal(mu, sigma)
+                a_cursor = [a_sample[1], a_sample[2]]
+                ax.plot(*a_cursor, 'o', color=color, alpha=1, markersize=4)
+
+        ax.set_aspect('equal')
+        ax.set_xlim(-0.2, 0.2)
+        ax.set_ylim(-0.2, 0.2)
+        ax.axis('off')
+        ax.set_title(f"Policy Snapshot @ Trial {trial_idx}")
+        plt.tight_layout()
+
 
     def plot_value_function(self, trial_idx=None, n_points=200):
         """

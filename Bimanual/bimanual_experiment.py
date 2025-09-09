@@ -9,20 +9,22 @@ from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_value_function, plot_policy
 from visualization import CursorLearningVisualizer
 
-def run_simulation(n_trials=2100, seed=0):
+def run_simulation(n_trials=2500, seed=0):
 
     np.random.seed(2*seed)
 
-    env = CursorControlEnv(radius=.12, motor_noise_std=.05)
+    env = CursorControlEnv(radius=.12, motor_noise_std=.075, discrete_targs=False, seed=seed)
     learner = CursorControlLearner(
-        alpha=0.08,
-        alpha_nu=0.08,
+        alpha=0.1,
+        alpha_nu=0.1,
         sigma=.05,
         seed=seed,
         baseline_decay=0.95,
+        kappa=5,
+        epsilon=0.5
     )
 
-    learner.initialize_baseline(env, n_trials=100)
+    learner.initialize_baseline(env, n_trials=1000)
 
     history = {
         'rewards': np.zeros(n_trials),
