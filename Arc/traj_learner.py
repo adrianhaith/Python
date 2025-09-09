@@ -7,9 +7,8 @@ Created on Tue Jul  8 08:48:40 2025
 """
 
 import numpy as np
-
 class TrajLearner:
-    def __init__(self, Ng, alpha=0.01, alpha_nu=0.01, init_goals=None, init_std=0.05, baseline_decay=0.99):
+    def __init__(self, Ng, alpha=0.01, alpha_nu=0.01, init_goals=None, init_std=0.05, baseline_decay=0.99, epsilon=0.3):
         """
         Parameters:
             Ng: number of subgoals
@@ -26,16 +25,21 @@ class TrajLearner:
         self.rwd_baseline = 0
         self.baseline_decay = baseline_decay
 
-        if init_goals is not None:
-            self.mean = init_goals.flatten()
-        else:
-            self.mean = np.zeros(self.action_dim)  # should be overridden
+        self.init_std = init_std
 
-        self.nu = np.ones(self.action_dim) * np.log(init_std)
+        if init_goals is not None:
+            self.mean_norm = init_goals.flatten() / self.init_std
+        else:
+            self.mean_norm = np.zeros(self.action_dim) / self.init_std  # should be overridden
+
+        self.nu = np.ones(self.action_dim) * 0 # initial normalized log-variance (normalized variance = 1)
+
+        self.epsilon = epsilon # PPO parameter (closer to 0 = more conservative updating)
 
     def sample_action(self):
-        std = np.sqrt(np.exp(self.nu))
-        action_flat = self.mean + std * np.random.randn(self.action_dim)
+        std_norm = np.sqrt(np.exp(self.nu))
+        action_norm = self.mean_norm + std_norm * np.random.randn(self.action_dim) # sample normalized action
+        action_flat = self.init_std * action_norm
         return action_flat.reshape((2, self.Ng))
 
     def initialize_baseline(self, env, n_trials=100):
@@ -62,16 +66,30 @@ class TrajLearner:
         # update reward baseline
         self.rwd_baseline = self.baseline_decay * self.rwd_baseline + (1 - self.baseline_decay) * reward
         
-        # flatten action matrix into a vector
-        action_flat = action.flatten()
-        delta = action_flat - self.mean
-        cov = np.diag(np.exp(self.nu)) # covariance matrix
+        # convert to normalized action
+        action_norm = action / self.init_std
+        action_flat = action_norm.flatten()
+        delta = action_flat - self.mean_norm
+
+        std_norm = np.sqrt(np.exp(self.nu))
+        cov_norm = np.diag(std_norm **2) # covariance matrix
         
-        grad_logp_mu = np.linalg.inv(cov) @ delta.T
-        self.mean += (self.alpha * (reward - self.rwd_baseline) * grad_logp_mu).ravel()
-        
+        grad_logp_mu = np.linalg.inv(cov_norm) @ delta.T
+
+        step = self.alpha * (reward - self.rwd_baseline) * grad_logp_mu
+
+        # PPO-style clipping to avoid excessively large updates to the mean
+        step_size = np.linalg.norm(step)
+        max_step_size = self.epsilon * np.linalg.norm(std_norm / (delta + 1e-8))
+        if step_size > max_step_size:
+            step = step * max_step_size / (step_size + 1e-8) # scale down step magnitude if needed
+
+        #self.mean_norm += (self.alpha * (reward - self.rwd_baseline) * grad_logp_mu).ravel()
+        self.mean_norm += step
+        print(step_size)
+
         grad_logp_nu = -.5 +.5*(delta **2) * np.exp(-self.nu) 
         self.nu += self.alpha_nu * grad_logp_nu.ravel() * (reward - self.rwd_baseline)
         
     def get_policy_mean(self):
-        return self.mean.reshape((2, self.Ng))
+        return self.mean_norm.reshape((2, self.Ng)) * self.init_std

@@ -1,3 +1,4 @@
+# %%
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -15,7 +16,7 @@ from utils import plot_arc_trials
 
 np.random.seed(2)
 
-# %% initialize and check baseline behavior
+# % initialize and check baseline behavior
 # create arc task environment
 arc_env = ArcTaskEnv(dt=.001) 
 
@@ -23,10 +24,11 @@ arc_env = ArcTaskEnv(dt=.001)
 init_arc_goals = make_arc_subgoals(arc_env.Ng)
 participant = TrajLearner(Ng=arc_env.Ng,
                           init_goals=init_arc_goals,
-                          init_std=0.006,
-                          alpha=0.0005,
-                          alpha_nu=0.05,
+                          init_std=0.08,
+                          alpha=0.08,
+                          alpha_nu=0.08,
                           baseline_decay=.99)
+
 participant.initialize_baseline(arc_env)
 
 # plot baseline behavior
