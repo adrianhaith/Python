@@ -51,7 +51,7 @@ class ArcTaskEnv:
 
         return None, -cost, True, {
             "trajectory": x_traj,
-            "motor commands": u_traj,
+            "actions": u_traj,
             "subgoals": subgoals
         }
 

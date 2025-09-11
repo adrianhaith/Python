@@ -86,7 +86,6 @@ class TrajLearner:
 
         #self.mean_norm += (self.alpha * (reward - self.rwd_baseline) * grad_logp_mu).ravel()
         self.mean_norm += step
-        print(step_size)
 
         grad_logp_nu = -.5 +.5*(delta **2) * np.exp(-self.nu) 
         self.nu += self.alpha_nu * grad_logp_nu.ravel() * (reward - self.rwd_baseline)
