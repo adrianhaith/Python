@@ -43,7 +43,7 @@ def plot_arc_trials(env, learner, n_trials=5, color='C0', title="cursor trajecto
 
     # get and plot mean goal locations
     subgoals = learner.get_policy_mean()
-    ax.plot(np.hstack(([0], subgoals[0, :])) , np.hstack(([0], subgoals[1,:])), linestyle='-', color='red', marker='o', linewidth=.5, markersize=1, alpha=.5)
+    ax.plot(np.hstack(([0], subgoals[0, :])) , np.hstack(([0], subgoals[1,:])), linestyle='-', color='red', marker='o', linewidth=2, markersize=5, alpha=1)
 
     
     # Simulate and plot trials
@@ -55,13 +55,13 @@ def plot_arc_trials(env, learner, n_trials=5, color='C0', title="cursor trajecto
         ax.plot(traj[:, 0], traj[:, 5], color=color, alpha=1)
         
     ax.set_aspect('equal')
-    ax.set_xlabel("x (m)")
-    ax.set_ylabel("y (m)")
-    ax.set_title(title)
+    ax.set_xlim([-0.1, 0.65])
+    ax.set_ylim([-.05, .35])
+    ax.set_axis_off()
     #ax.set_xlim(-0.3, 0.3)
     #ax.set_ylim(-0.1, 0.6)
     plt.tight_layout()
-    plt.show()
+    #plt.show()
     
 def plot_arc_trials2(env, learner, n_trials=5, color='C0'):
     """
