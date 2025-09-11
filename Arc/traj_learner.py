@@ -81,6 +81,7 @@ class TrajLearner:
         # PPO-style clipping to avoid excessively large updates to the mean
         step_size = np.linalg.norm(step)
         max_step_size = self.epsilon * np.linalg.norm(std_norm / (delta + 1e-8))
+        
         if step_size > max_step_size:
             step = step * max_step_size / (step_size + 1e-8) # scale down step magnitude if needed
 

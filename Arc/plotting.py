@@ -79,3 +79,64 @@ def plot_arc_trials(env, learner, n_trials=5, color='C0', title="cursor trajecto
     #ax.set_ylim(-0.1, 0.6)
     plt.tight_layout()
     #plt.show()
+
+class ArcVisualizer:
+    def __init__(self, env, learner, history):
+        self.env = env
+        self.learner = learner
+        self.history = history
+        self.Ng = learner.Ng
+        self.r = env.radius
+        self.w = env.width
+        self.center = env.center
+        self.theta = np.linspace(-np.pi/2, np.pi/2, 300)
+
+    def plot_trials(self, trial_range, color='C0', title="Cursor trajectories (from history)"):
+        start, end = trial_range
+        trials = range(start, end)
+
+        fig, ax = plt.subplots(figsize=(6, 6))
+        ax.set_aspect('equal', adjustable='box')
+
+        # --- Plot arc geometry ---
+        arc_outer = self.center[:, None] + (self.r + self.w/2) * np.vstack((np.sin(self.theta), np.cos(self.theta)))
+        arc_inner = self.center[:, None] + (self.r - self.w/2) * np.vstack((np.sin(self.theta), np.cos(self.theta)))
+        ax.plot(arc_outer[0], arc_outer[1], 'k-', linewidth=1)
+        ax.plot(arc_inner[0], arc_inner[1], 'k-', linewidth=1)
+        for point in [np.array([0, 0]), np.array([0.5, 0])]:
+            circle = plt.Circle(point, self.w/2, color='gray', fill=False, linestyle='-')
+            ax.add_patch(circle)
+
+        # --- Plot each trajectory ---
+        for t in trials:
+            traj = self.history['trajectories'][t]  # shape (NT, 2)
+            ax.plot(traj[:, 0], traj[:, 1], color=color, alpha=1.0)
+
+            # --- Plot subgoals for this trial---
+            #subgoals = self.history['actions'][t]
+            mean_subgoals = self.history['means'][t]
+            mean_subgoals_x = mean_subgoals[:self.Ng]
+            mean_subgoals_y = mean_subgoals[self.Ng:]
+            ax.plot(mean_subgoals_x, mean_subgoals_y, linestyle='-', color='red', marker='o', linewidth=2, markersize=5, alpha=1)
+
+            # --- Plot ellipses for final trial's stds ---
+            stds = self.history['stds'][t]
+            std_x = stds[:self.Ng]
+            std_y = stds[self.Ng:]
+
+            for i in range(self.Ng):
+                mu_x = mean_subgoals_x[i]
+                mu_y = mean_subgoals_y[i]
+                width = 2 * std_x[i]
+                height = 2 * std_y[i]
+                ellipse = Ellipse((mu_x, mu_y), width=width, height=height,
+                                    edgecolor='red', facecolor='none', linewidth=1.5, linestyle='--', alpha=0.6)
+                ax.add_patch(ellipse)
+
+        # --- Final formatting ---
+        ax.set_xlim([-0.1, 0.65])
+        ax.set_ylim([-.05, .35])
+        ax.set_title(title)
+        ax.set_axis_off()
+        plt.tight_layout()
+        plt.show()

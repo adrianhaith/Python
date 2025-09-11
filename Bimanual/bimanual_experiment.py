@@ -56,6 +56,7 @@ def bin_data(array, bin_size=60):
     return binned, n_bins, bin_size
 
 
+
 # %% run multiple simulations
 n_runs = 20
 n_trials = 2600
