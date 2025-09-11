@@ -11,7 +11,7 @@ from wrist_model import WristLDS  # your LDS class with simulate()
 import matplotlib as plt
 
 class ArcTaskEnv:
-    def __init__(self, dt=0.01, radius=0.25, width=0.1):
+    def __init__(self, dt=0.01, radius=0.25, width=.08):
         self.dt = dt
         self.radius = radius
         self.width = width
