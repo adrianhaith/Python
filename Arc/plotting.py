@@ -91,9 +91,9 @@ class ArcVisualizer:
         self.center = env.center
         self.theta = np.linspace(-np.pi/2, np.pi/2, 300)
 
-    def plot_trials(self, trial_range, color='C0', title="Cursor trajectories (from history)"):
-        start, end = trial_range
-        trials = range(start, end)
+    def plot_trials(self, start_trial, n_trials=5, color='C0', title="Cursor trajectories (from history)"):
+        
+        trials = range(start_trial, start_trial+n_trials)
 
         fig, ax = plt.subplots(figsize=(6, 6))
         ax.set_aspect('equal', adjustable='box')
@@ -140,3 +140,34 @@ class ArcVisualizer:
         ax.set_axis_off()
         plt.tight_layout()
         plt.show()
+
+# function to jitter different movements before taking average trajectories, to avoid arficially in-phase submovements
+def jitter_and_average(radial_pos_trials, dt, jitter_ms=25, n_avg_trials=100):
+    """
+    Applies random temporal jitter to trial data and computes average radial trajectory.
+
+    Parameters:
+        radial_pos_trials: (n_trials, n_timesteps) array
+        dt: timestep in seconds
+        jitter_ms: max jitter to apply (symmetric) in milliseconds
+        n_avg_trials: number of trials to include in average (e.g. 100)
+
+    Returns:
+        mean_radial: (n_timesteps,) array with nan-robust average
+    """
+    n_trials, n_timesteps = radial_pos_trials.shape
+    jitter_steps = int(jitter_ms / 1000 / dt)
+
+    padded = np.full((n_avg_trials, n_timesteps + 2 * jitter_steps), np.nan)
+
+    for i in range(n_avg_trials):
+        shift = np.random.randint(-jitter_steps, jitter_steps + 1)
+        if shift >= 0:
+            padded[i, jitter_steps + shift : jitter_steps + shift + n_timesteps] = radial_pos_trials[i]
+        else:
+            padded[i, jitter_steps + shift : jitter_steps + shift + n_timesteps] = radial_pos_trials[i]
+
+    mean_radial = np.nanmean(padded, axis=0)
+
+    # Return center segment of same original length
+    return mean_radial[jitter_steps : jitter_steps + n_timesteps]

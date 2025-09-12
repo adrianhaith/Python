@@ -21,7 +21,7 @@ def run_simulation(n_trials=2500, seed=0):
         seed=seed,
         baseline_decay=0.95,
         kappa=5,
-        epsilon=0.5
+        epsilon=0.2
     )
 
     learner.initialize_baseline(env, n_trials=1000)

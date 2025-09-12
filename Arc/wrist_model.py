@@ -118,11 +118,11 @@ class WristLDS:
     
             for i in range(NT_sub):
                 L_t = self.L[:, :, i]
-                u = L_t @ x
+                u = L_t @ x #+ .01 * np.random.normal(size=(1,2))
                 x_traj[sim_idx] = x
-                u_traj[sim_idx] = u
+                u_traj[sim_idx] = u[0]
     
-                x = self.Ad @ x + self.Bd @ u
+                x = self.Ad @ x + self.Bd @ u[0]
                 sim_idx += 1
     
         x_traj[sim_idx] = x  # add final state

@@ -6,7 +6,7 @@ matplotlib.rcParams['svg.fonttype'] = 'none'
 from arc_task_env import ArcTaskEnv, make_arc_subgoals
 from traj_learner import TrajLearner
 from wrist_model import WristLDS
-from plotting import plot_arc_trials
+from plotting import plot_arc_trials, jitter_and_average
 
 def run_simulation(n_trials=1000, seed=0):
     np.random.seed(seed)
@@ -28,7 +28,7 @@ def run_simulation(n_trials=1000, seed=0):
                                 init_std=0.08,
                                 alpha=0.1,
                                 alpha_nu=0.1,
-                                baseline_decay=.99,
+                                baseline_decay=.95,
                                 epsilon=0.1)
     
     participant.initialize_baseline(arc_env)
@@ -58,7 +58,7 @@ def run_simulation(n_trials=1000, seed=0):
         radial_pos = np.sqrt((arc_env.radius-trajectory[:,0])**2 + trajectory[:,1]**2)
         history['radial_pos'][trial] = radial_pos
 
-    plot_arc_trials(arc_env, participant, n_trials=5)
+    #plot_arc_trials(arc_env, participant, n_trials=5)
 
     return history, NT
     
@@ -70,44 +70,74 @@ def bin_data(array, bin_size=50):
     n_bins = len(array) // bin_size
     trimmed = array[:n_bins * bin_size]  # drop incomplete final block
     binned = trimmed.reshape(n_bins, bin_size).mean(axis=1)
-    return binned, n_bins, bin_size
+    bin_centers = bin_size*(np.arange(n_bins)+.5)
+    return binned, n_bins, bin_size, bin_centers
 
 
 # %% run multiple simulations
-n_runs = 5
+n_runs = 100
 n_trials = 1000
 bin_size = 50
 
 all_rewards = []
 all_dir_errors = []
 
-initial_radial_dist = []
+early_radial_dist = []
 late_radial_dist = []
+
+early_mean_trajs = []
+late_mean_trajs = []
+
+radial_pos_all_runs = []
 
 time = []
 for run in range(n_runs):
     np.random.seed(run)
     hist, NT = run_simulation(n_trials=n_trials, seed=run)
-    rwd_binned, n_bins, _ = bin_data(hist['rewards'], bin_size=bin_size)
+    rwd_binned, n_bins, _, bin_centers = bin_data(hist['rewards'], bin_size=bin_size)
     all_rewards.append(rwd_binned)
 
     rng_early = np.arange(0,199)
     rng_late = np.arange(799,999)
-    initial_radial_dist.append(np.mean(hist['radial_pos'][rng_early,:], axis=0))
-    late_radial_dist.append(np.mean(hist['radial_pos'][rng_late,:], axis=0))
+
+    radial_pos_all_runs.append(hist['radial_pos'])
+
+
 
     time = .001 * np.arange(NT) # time vector for plotting later
 
     print("run",{run})
 
-    fig, axs = plt.subplots(1, 1, figsize=(4, 8), sharex=True)
-    traj = hist['radial_pos']
+    #fig, axs = plt.subplots(1, 1, figsize=(4, 2), sharex=True)
+    #traj = hist['radial_pos']
 
-    axs.plot(time, np.mean(hist['radial_pos'][rng_early,:],axis=0), label="early")
-    axs.plot(time, np.mean(hist['radial_pos'][rng_late,:],axis=0), label="late")
+    #axs.plot(time, np.mean(hist['radial_pos'][rng_early,:],axis=0), label="early")
+    #axs.plot(time, np.mean(hist['radial_pos'][rng_late,:],axis=0), label="late")
 
 # %%
+fig, axs = plt.subplots(2, 1, figsize=(4, 4), sharex=True)
 
+bin_size = 50
 
+axs[0].plot(bin_centers, np.mean(all_rewards, axis=0), marker='o', label='Reward')
+axs[0].set_ylabel("Reward")
+axs[0].set_xlabel("Trials")
 
+for i in range(12):
+    std_binned, _, _, bin_centers = bin_data(hist['stds'][:,i], bin_size=bin_size)
+    axs[1].plot(bin_centers, std_binned, marker='o')
+axs[1].set_ylabel("Std Dev")
+axs[1].set_xlabel("Trial")
+axs[1].legend()
 
+# %% plot mean radial distance across runs
+
+for run in range(n_runs):
+    early_mean_trajs.append(jitter_and_average(radial_pos_all_runs[run][:100], dt=0.001, jitter_ms=150))
+    late_mean_trajs.append(jitter_and_average(radial_pos_all_runs[run][100:], dt=0.001, jitter_ms=150))
+
+plt.plot(time, np.mean(early_mean_trajs, axis=0), label="early")
+plt.plot(time, np.mean(late_mean_trajs, axis=0), label="late")
+plt.xlabel("time")
+plt.ylabel("radial position")
+plt.legend()

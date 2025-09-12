@@ -17,7 +17,7 @@ from traj_learner import TrajLearner
 from wrist_model import WristLDS
 from plotting import plot_arc_trials, ArcVisualizer
 
-np.random.seed(2)
+np.random.seed(930)
 
 # % initialize and check baseline behavior
 # create arc task environment
@@ -37,7 +37,7 @@ participant = TrajLearner(Ng=arc_env.Ng,
                           init_std=0.08,
                           alpha=0.1,
                           alpha_nu=0.1,
-                          baseline_decay=.99)
+                          baseline_decay=.95)
 
 participant.initialize_baseline(arc_env)
 
@@ -54,7 +54,9 @@ history = {
     'rewards': np.zeros(n_trials),
     'stds': np.zeros((n_trials, 12)),
     'trajectories': np.zeros((n_trials, NT, 2)),
-    'radial_pos' : np.zeros((n_trials, NT))
+    'radial_pos' : np.zeros((n_trials, NT)),
+    'delta_mean' : np.zeros((n_trials, 12)),
+    'max_step_size' : np.zeros((n_trials))
 }
 
 
@@ -65,15 +67,19 @@ for trial in range(n_trials):
     history['means'][trial] = participant.init_std * participant.mean_norm
     history['stds'][trial] = participant.init_std * np.sqrt(np.exp(participant.nu))
 
+    if(trial==110):
+        a=1
+
     _, reward, _, info = arc_env.step(action)
-    participant.update(action, reward)
+    step, max_step_size = participant.update(action, reward)
 
     # update history
     history['rewards'][trial] = reward
     history['actions'][trial] = action
     trajectory = info['trajectory'][:,[0,5]] # position x-y trajectory
     history['trajectories'][trial] = trajectory # x position
-    #history['trajectories'][trial,:,1] = info['trajectory'][:,5] # y position
+    history['delta_mean'][trial] = step # change in mean
+    history['max_step_size'][trial] = max_step_size # maximum step size
     
     # compute radial position
     radial_pos = np.sqrt((arc_env.radius-trajectory[:,0])**2 + trajectory[:,1]**2)
@@ -89,8 +95,8 @@ plt.savefig("late_trajectories.svg", format="svg", bbox_inches='tight')
 # %%
 # create object to visualize the data
 vis = ArcVisualizer(arc_env, participant, history)
-vis.plot_trials((0, 10), title="Early trials")
-vis.plot_trials((990, 1000), title="Late trials")
+vis.plot_trials(0, 10, title="Early trials")
+vis.plot_trials(989, 10, title="Late trials")
 
 # --------------------------------
 # %% plot learning timecourse

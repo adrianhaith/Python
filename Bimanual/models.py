@@ -159,7 +159,8 @@ class CursorControlLearner:
             delta_mu_i = delta_w_i @ phi        # scalar
             
             # PPO-style bound
-            max_step = self.epsilon * (sigma_norm[i]**2) / abs(a_norm[i] - mu_norm[i] + 1e-8)  # add epsilon for stability
+            max_step = self.epsilon / (np.linalg.norm(a_norm[i]-mu_norm[i])/(sigma_norm[i]**2)+1e-8)
+            #max_step = self.epsilon * (sigma_norm[i]) / abs(a_norm[i] - mu_norm[i] + 1e-8)  # add epsilon for stability
 
             if abs(delta_mu_i) > max_step:
                 scale = max_step / abs(delta_mu_i)
