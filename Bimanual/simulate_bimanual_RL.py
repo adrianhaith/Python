@@ -19,7 +19,7 @@ from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_value_function, plot_policy
 from visualization import CursorLearningVisualizer
 
-from utils import compute_von_mises_basis
+from utils import compute_von_mises_basis, bin_data
 
 np.random.seed(1)
 
@@ -57,7 +57,7 @@ history = {
     'Ws': np.zeros((n_trials, 4, participant.n_basis)),
     'nus': np.zeros((n_trials, 4)),
     'Vs': np.zeros((n_trials, participant.n_basis)),
-    'abs_dir_errors': np.zeros(n_trials)
+    'dir_errors': np.zeros(n_trials)
 }
 
 for trial in range(n_trials):
@@ -80,21 +80,14 @@ for trial in range(n_trials):
     # Store data for this trial
     history['actions'][trial] = a
     history['rewards'][trial] = r
-    history['abs_dir_errors'][trial] = info['abs_directional_error']
+    history['dir_errors'][trial] = info['directional_error']
 
 
 
 # %% ------plot learning time course------
 #---------------------
 
-def bin_data(array, bin_size=60):
-    """
-    Returns average values of input array binned into bins of size block_size
-    """
-    n_bins = len(array) // bin_size
-    trimmed = array[:n_bins * bin_size]  # drop incomplete final block
-    binned = trimmed.reshape(n_bins, bin_size).mean(axis=1)
-    return binned, n_bins, bin_size
+
 
 time = np.arange(n_trials)
 action_labels = ['Lx', 'Ly', 'Rx', 'Ry']
@@ -131,7 +124,7 @@ axs[2].set_xlabel("Trial")
 axs[2].legend()
 
 # absolute direction error - for comparison with human data
-dir_errors_binned, _, _ = bin_data(np.rad2deg(history['abs_dir_errors']), bin_size=bin_size)
+dir_errors_binned, _, _ = bin_data(np.rad2deg(np.abs(history['dir_errors'])), bin_size=bin_size)
 axs[3].plot(bin_centers, dir_errors_binned, marker='o', label='|directional_error|',markersize=3)
 axs[3].set_yticks([0, 30, 60, 90])
 axs[3].set_xlabel("Trial")

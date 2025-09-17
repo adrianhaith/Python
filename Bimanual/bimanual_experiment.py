@@ -8,7 +8,7 @@ matplotlib.rcParams['svg.fonttype'] = 'none'
 from models import CursorControlEnv, CursorControlLearner
 #from plotting import plot_value_function, plot_policy
 from visualization import CursorLearningVisualizer
-from utils import compute_von_mises_basis, wrap_to_pi
+from utils import compute_von_mises_basis, wrap_to_pi, wrap_to_2pi, ridge_fit, analyze_bias_variability_sliding
 
 
 def run_simulation(n_trials=2500, seed=0):
@@ -64,8 +64,8 @@ def bin_data(array, bin_size=60):
 
 
 # %% run multiple simulations
-n_runs = 20
-n_trials = 2200
+n_runs = 100
+n_trials = 3000
 bin_size = 60
 
 all_binned_rewards = []
@@ -132,55 +132,6 @@ from numpy.linalg import lstsq
 from scipy.special import i0
 
 
-
-
-
-
-def analyze_bias_variability_sliding(theta_targets, theta_errors, window=60, n_basis=36, kappa=0.000001):
-    #n_trials = len(theta_targets)
-    n_windows = n_trials // window
-
-    bias_vars = np.zeros(n_windows)
-    resid_vars = np.zeros(n_windows)
-    total_vars = np.zeros(n_windows)
-
-    for i in range(n_windows):
-        start = i * window
-        end = start + window
-
-        target_win = theta_targets[start:end]
-        error_win = theta_errors[start:end]
-        error_win = wrap_to_pi(error_win)
-
-        Phi = compute_von_mises_basis(target_win, n_basis=n_basis, kappa=kappa)
-        w, _, _, _ = lstsq(Phi, error_win, rcond=None)
-        bias_est = Phi @ w
-        residuals = error_win - bias_est
-
-        bias_vars[i] = np.var(np.rad2deg(bias_est))
-        resid_vars[i] = np.var(np.rad2deg(residuals))
-        total_vars[i] = np.var(np.rad2deg(error_win))
-
-        if(0):
-            # visualize the errors for this block of trials
-            theta_grid = np.linspace(0, 2*np.pi, 500)
-            Phi_grid = compute_von_mises_basis(theta_grid, n_basis=n_basis, kappa=kappa)
-            predicted_error = Phi_grid @ w  # shape (500,)
-
-            plt.figure(figsize=(6, 4))
-            plt.scatter(np.rad2deg(target_win), np.rad2deg(error_win), alpha=0.3, label='Actual errors', s=10)
-            plt.plot(np.rad2deg(theta_grid), np.rad2deg(predicted_error), color='black', linewidth=2, label='Fitted bias')
-            plt.xlabel('Target direction (deg)')
-            plt.ylabel('Directional error (deg)')
-            plt.title('Predicted vs Actual Directional Errors')
-            plt.axhline(0, color='gray', linestyle='--')
-            plt.grid(True)
-            plt.legend()
-            plt.tight_layout()
-            plt.show()
-
-    return bias_vars, resid_vars, total_vars
-
 bias_vars_all = []
 resid_vars_all = []
 total_vars_all = []
@@ -196,6 +147,8 @@ plt.plot(scaling*np.mean(bias_vars_all, axis=0), color="blue")
 plt.plot(scaling*np.mean(resid_vars_all, axis=0), color="red")
 plt.plot(scaling*np.mean(total_vars_all, axis=0), color="black")
 plt.grid(True)
+plt.ylim(0,3600)
+plt.xlim(15,50)
 
 # %% load human data for comparison
 from scipy.io import loadmat
@@ -209,7 +162,7 @@ resid_vars_human_all = []
 total_vars_human_all = []
 
 for subj in range(13):
-    bias_vars, resid_vars, total_vars = analyze_bias_variability_sliding(theta_targets=subjects[subj]['target_dir'].squeeze(), theta_errors=subjects[subj]['directional_error'].squeeze(), window=60)
+    bias_vars, resid_vars, total_vars = analyze_bias_variability_sliding(theta_targets=wrap_to_2pi(subjects[subj]['target_dir'].squeeze()*180/np.pi), theta_errors=subjects[subj]['directional_error'].squeeze(), window=60)
 
     bias_vars_human_all.append(bias_vars)
     resid_vars_human_all.append(resid_vars)
