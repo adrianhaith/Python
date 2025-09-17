@@ -19,6 +19,8 @@ from models import CursorControlEnv, CursorControlLearner
 from plotting import plot_value_function, plot_policy
 from visualization import CursorLearningVisualizer
 
+from utils import compute_von_mises_basis
+
 np.random.seed(1)
 
 # % Simulate learning
