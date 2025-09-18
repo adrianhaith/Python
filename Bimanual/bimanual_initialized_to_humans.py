@@ -62,7 +62,7 @@ from pathlib import Path
 DATA_PATH = Path('human_data.mat').parent / 'human_data.mat'
 #DATA_PATH = Path(__file__).parent / 'human_data.mat'
 mat = loadmat(DATA_PATH)
-subj_id = 0 # id number of subject (0-12)
+subj_id = 1 # id number of subject (0-12)
 subj_data = mat['human_data'][0][subj_id]  # adjust indexing as needed
 
 target_angles = wrap_to_2pi(np.pi/2 - subj_data['target_angles'].squeeze())  # (n_trials,)
@@ -201,3 +201,4 @@ axs[1].set_title("Data")
 
 plt.tight_layout()
 plt.show()
+

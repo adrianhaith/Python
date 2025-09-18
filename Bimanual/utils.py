@@ -26,7 +26,7 @@ def wrap_to_2pi(x):
 
 from sklearn.linear_model import Ridge
 
-def ridge_fit(Phi, Y, alpha=0.1):
+def ridge_fit(Phi, Y, alpha=1):
     model = Ridge(alpha=alpha, fit_intercept=False)
     model.fit(Phi, Y)
     return model.coef_.T  # shape: (n_dims, n_basis)
@@ -88,3 +88,71 @@ def analyze_bias_variability_sliding(theta_targets, theta_errors, window=60, n_b
             plt.show()
 
     return bias_vars, resid_vars, total_vars
+
+def trimmed_std(data, proportion_to_cut=0.05):
+    """
+    Compute standard deviation after trimming outliers.
+    """
+    data = np.sort(data)
+    n = len(data)
+    cut = int(proportion_to_cut * n)
+    trimmed = data[cut : n - cut]
+    return np.std(trimmed)
+
+
+def fit_human_policy(target_angles, hand_movements, n_basis=16, kappa=5, robust_var=True):
+    """
+    Fit initial policy weights (W_init) and log-std (nu_init) from human data.
+    target_angles: shape (n_trials,) in radians
+    hand_movements: shape (n_trials, 2), [LH_y, RH_x] endpoint movements
+    """
+    # Build basis function matrix
+    Phi = compute_von_mises_basis(target_angles, n_basis=n_basis, kappa=kappa)  # (n_trials, n_basis)
+
+    # Fit mean movement policy for LH_y and RH_x
+    #W_human = lstsq(Phi, hand_movements, rcond=None)[0].T  # shape: (2, n_basis)
+    W_human = ridge_fit(Phi, hand_movements, alpha=1)
+    W_init = W_human
+
+    # Fit residual variance and scale it accordingly
+    residuals = hand_movements - Phi @ W_human
+
+    if(robust_var):
+        # robust estimate of std - remove 5% most extreme data points at top and bottom
+        std_all = np.zeros(4)
+        # calculate a robust std for each action dimension
+        for d in range(4):
+            std_all[d]=trimmed_std(residuals[:,d],proportion_to_cut=0.05)
+    else:
+        # non-robust (standard) estimate of std - sqrt
+        std_all = np.std(residuals, axis=0)
+
+    # set std_init (for normalization) to average of LHy and RHx variability
+    std_init = np.mean(std_all[[1,2]])
+    # set nus based on individual dimension variability, normalized by std_init
+    nu_init = np.log((std_all/std_init)**2) # initial values of nu - allowed to be different
+
+    return W_init, std_init, nu_init
+
+
+from scipy.stats import gaussian_kde
+def plot_kde(data, label='KDE', bandwidth=None, color='blue'):
+    """
+    Plot a kernel density estimate (smoothed histogram) of the data.
+    """
+    data = np.asarray(data)
+    kde = gaussian_kde(data, bw_method=bandwidth)
+    
+    x_grid = np.linspace(data.min() - .2, data.max() + .2, 500)
+    y_kde = kde(x_grid)
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(x_grid, y_kde, label=label, color=color)
+    plt.fill_between(x_grid, y_kde, alpha=0.2, color=color)
+    plt.title("Kernel Density Estimate")
+    plt.xlabel("Value")
+    plt.ylabel("Density")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

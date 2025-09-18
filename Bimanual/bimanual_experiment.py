@@ -147,8 +147,7 @@ plt.plot(scaling*np.mean(bias_vars_all, axis=0), color="blue")
 plt.plot(scaling*np.mean(resid_vars_all, axis=0), color="red")
 plt.plot(scaling*np.mean(total_vars_all, axis=0), color="black")
 plt.grid(True)
-plt.ylim(0,3600)
-plt.xlim(15,50)
+
 
 # %% load human data for comparison
 from scipy.io import loadmat
