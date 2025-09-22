@@ -78,13 +78,15 @@ for run in range(n_runs):
     np.random.seed(run)
     hist = run_simulation(n_trials=n_trials, seed=run)
     rwd_binned, n_bins, _ = bin_data(hist['rewards'], bin_size=bin_size)
-    dir_binned, _, _ = bin_data(np.rad2deg(hist['abs_dir_errors']), bin_size=bin_size)
+    dir_binned, _, _ = bin_data(np.rad2deg(wrap_to_pi(hist['abs_dir_errors'])), bin_size=bin_size)
     all_binned_rewards.append(rwd_binned)
     all_binned_dir_errors.append(dir_binned)
 
     all_errors[run]=hist['directional_error']
     all_targ_dirs[run] = hist['targ_dir']
     
+    
+
     print("run ",run )
 
 all_binned_rewards = np.stack(all_binned_rewards)         # shape (n_runs, n_bins)

@@ -9,6 +9,7 @@ Created on Sun Jul  6 16:21:20 2025
 # define models of the environment and the learner
 
 import numpy as np
+from utils import wrap_to_pi
 
 # define the skittles environment class
 
@@ -54,9 +55,9 @@ class CursorControlEnv:
         # Compute directional error
         targ_ang = np.atan2(self.target_pos[1],self.target_pos[0])
         reach_ang = np.atan2(cursor_pos[1],cursor_pos[0])
-        angular_error = targ_ang - reach_ang
+        angular_error = reach_ang - targ_ang
         abs_dir_error = np.abs(angular_error)
-        directional_error = angular_error
+        directional_error = wrap_to_pi(angular_error)
 
 
         # alternative calculation of directional error
@@ -66,14 +67,15 @@ class CursorControlEnv:
         dot = np.dot(vec_target, vec_actual)
         norm_prod = np.linalg.norm(vec_target) * np.linalg.norm(vec_actual) + 1e-8  # avoid 0/0
         cos_theta = np.clip(dot / norm_prod, -1.0, 1.0)
-        angular_error = np.arccos(cos_theta)  # radians
+        angular_error = wrap_to_pi(np.arccos(cos_theta))  # radians
         abs_dir_error = np.abs(angular_error)
 
         info = {
             'abs_directional_error': abs_dir_error,
             'cursor_pos': cursor_pos.copy(),
             'target_pos': self.target_pos.copy(),
-            'directional_error': directional_error
+            'directional_error': directional_error,
+            'reach_ang': reach_ang
         }
 
         return self.state, reward, True, info

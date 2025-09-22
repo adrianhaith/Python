@@ -100,7 +100,7 @@ def trimmed_std(data, proportion_to_cut=0.05):
     return np.std(trimmed)
 
 
-def fit_human_policy(target_angles, hand_movements, n_basis=16, kappa=5, robust_var=True):
+def fit_human_policy(target_angles, hand_movements, n_basis=16, kappa=5, robust_var=False):
     """
     Fit initial policy weights (W_init) and log-std (nu_init) from human data.
     target_angles: shape (n_trials,) in radians
@@ -122,7 +122,7 @@ def fit_human_policy(target_angles, hand_movements, n_basis=16, kappa=5, robust_
         std_all = np.zeros(4)
         # calculate a robust std for each action dimension
         for d in range(4):
-            std_all[d]=trimmed_std(residuals[:,d],proportion_to_cut=0.05)
+            std_all[d]=trimmed_std(residuals[:,d],proportion_to_cut=0.025)
     else:
         # non-robust (standard) estimate of std - sqrt
         std_all = np.std(residuals, axis=0)
