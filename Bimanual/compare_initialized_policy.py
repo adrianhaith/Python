@@ -9,21 +9,34 @@ import matplotlib.pyplot as plt
 from visualization import CursorLearningVisualizer
 
 from plotting import plot_policy, plot_value_function
+import matplotlib
+matplotlib.rcParams['svg.fonttype'] = 'none'
 
 def visualize_policy(W, target_angles, actions):
     # compare actions and fitted policies
-    fig, axs = plt.subplots(1,2,figsize=(15,4),gridspec_kw={'width_ratios': [2, 1]})
+    n_trials = np.size(target_angles[0])
+
+    fig, axs = plt.subplots(1,2,figsize=(8,4),gridspec_kw={'width_ratios': [2, 1]})
     theta_grid = np.linspace(0, 2*np.pi, 500)
     Phi_grid = compute_von_mises_basis(theta_grid, n_basis=16, kappa=5)
-    predicted_action = Phi_grid @ W_init  # shape (500,)
+    predicted_action = Phi_grid @ W  # shape (500,)
     angles_grid= np.linspace(0, 2 * np.pi, 500)
-    axs[0].plot(angles_grid, predicted_action[:,1],'-',color='blue')
-    axs[0].plot(angles_grid, predicted_action[:,2],'-',color='orange')
-    axs[0].plot(target_angles, actions[:,1],'o',color='blue')
-    axs[0].plot(target_angles, actions[:,2],'o',color='orange')   
+    axs[0].plot(np.rad2deg(angles_grid), predicted_action[:,1],'-',color='blue')
+    axs[0].plot(np.rad2deg(angles_grid), predicted_action[:,2],'-',color='orange')
+    axs[0].plot(np.rad2deg(target_angles), actions[:,1],'o',color='blue')
+    axs[0].plot(np.rad2deg(target_angles), actions[:,2],'o',color='orange')   
+
+
+    # plot ideal policy
+    r = 0.12
+    ideal_Ly = r * np.cos(angles_grid)
+    ideal_Rx = r * np.sin(angles_grid)
+    axs[0].plot(np.rad2deg(angles_grid),ideal_Ly,':',color='blue')
+    axs[0].plot(np.rad2deg(angles_grid),ideal_Rx,':',color='orange')
     #axs[0].set_ylim(-.3, .3)
     axs[0].grid(True)
-
+    axs[0].set_ylim(-.2, .2)
+    axs[0].set_xticks((0,45,90,135,180,225, 270, 315, 360))
     # plot actions in 2d, color-coded by target direction
     # create colormap and function to convert target angle into a color
     cmap=plt.cm.hsv
@@ -51,7 +64,7 @@ def visualize_policy(W, target_angles, actions):
 
     #plot_kde(residuals[:,1],color='blue', bandwidth=.2)
     #plot_kde(residuals[:,2],color='orange', bandwidth=.2)
-
+    return fig
 
 
 # Load human data from .mat file
@@ -59,7 +72,7 @@ from pathlib import Path
 DATA_PATH = Path('human_data_120.mat').parent / 'human_data.mat'
 #DATA_PATH = Path(__file__).parent / 'human_data.mat'
 mat = loadmat(DATA_PATH)
-subj_id = 1 # id number of subject (0-12)
+subj_id = 6 # id number of subject (0-12)
 subj_data = mat['human_data'][0][subj_id]  # adjust indexing as needed
 
 target_angles = wrap_to_2pi(np.pi/2 - subj_data['target_angles'].squeeze())  # (n_trials,)
@@ -94,9 +107,9 @@ participant.initialize_baseline(env, n_trials=1000)
 print(" ")
 # %% compare initial human behavior to behavior of initialized policy
 
-n_trials = np.size(target_angles)
+n_trials_sim = np.size(target_angles)
 
-actions = np.zeros((n_trials,4))
+actions = np.zeros((n_trials_sim,4))
 all_actions = []
 all_target_angles = []
 for k in range(1):
@@ -106,41 +119,34 @@ for k in range(1):
         actions[i] = a
         e = info['directional_error'].copy()
     all_actions.extend(actions.copy())
-    all_target_angles.extend(target_angles.copy())
-    
-    
+    all_target_angles.extend(target_angles.copy())    
 
 all_actions = np.array(all_actions)
 all_target_angles = np.array(all_target_angles)
 
-fig = visualize_policy(W_init * std_init, target_angles, hand_movements)
-#plt.title("Human")
-
-fig = visualize_policy(W_init * std_init, all_target_angles, all_actions)
-#plt.title("Model")
+fig = visualize_policy(W_init, target_angles, hand_movements)
+fig.savefig('initial_policy.svg', format='svg', bbox_inches='tight')
+plt.title("Human")
 
 #%%
+fig = visualize_policy(W_init, all_target_angles, all_actions)
+plt.title("Model")
 
-# # %%
-# # compare actual and fitted policies
-# fig, axs = plt.subplots(1,2,figsize=(15,4),gridspec_kw={'width_ratios': [2, 1]})
-# plt.figure(figsize=(8,4))
-# theta_grid = np.linspace(0, 2*np.pi, 500)
-# Phi_grid = compute_von_mises_basis(theta_grid, n_basis=participant.n_basis, kappa=participant.kappa)
-# predicted_action = Phi_grid @ W_init  # shape (500,)
-# angles_grid= np.linspace(0, 2 * np.pi, 500)
-# axs[0].plot(angles_grid, predicted_action[:,1],'-',color='blue')
-# axs[0].plot(angles_grid, predicted_action[:,2],'-',color='orange')
-# axs[0].plot(target_angles, actions[:,1],'o',color='blue')
-# axs[0].plot(target_angles, actions[:,2],'o',color='orange')  
-# axs[0].grid(True)
-# axs[0].set_title('Model')
-# axs[0].set_ylim(-0.4, 0.4)
+# %% Train model and re-plot policy
+n_trials = 2200
+for t in range(n_trials):
+        ss = env.reset()
+        aa, mu, sigma, phi = participant.sample_action(ss)
+        _, reward, _, info = env.step(aa)
+        participant.update(aa, mu, sigma, phi, reward)
 
-# axs[1].plot(actions[:,1],actions[:,2],'bo')
-# axs[1].plot(0,0,'k.')
-# #axs[1].axis('off')
-# axs[1].set_aspect('equal')
-# axs[1].set_xlim(-.3, .3)
-# axs[1].set_ylim(-.3, .3)
+WW = participant.W.copy()
+W_final = WW.T
+#%
+fig = visualize_policy(W_final * std_init, target_angles, hand_movements)
+fig.savefig('late_policy.svg', format='svg', bbox_inches='tight')
+#fig = visualize_policy(W_final * std_init, target_angles, hand_movements)
 
+# %%
+
+# %%
