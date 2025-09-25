@@ -47,12 +47,13 @@ class ArcTaskEnv:
         #cursor_pos = x_traj[:, [self.lds.Nstates//2 - 1, self.lds.Nstates - 1]]  # extract x, y
         #cursor_pos = x_traj[:,[0, self.lds.Nstates//2-1]] # pull x and y position out of the full state
 
-        cost = self.compute_arc_cost(x_traj, u_traj)
+        cost, left_channel = self.compute_arc_cost(x_traj, u_traj)
 
         return None, -cost, True, {
             "trajectory": x_traj,
             "actions": u_traj,
-            "subgoals": subgoals
+            "subgoals": subgoals,
+            "left_channel": left_channel
         }
 
     def compute_arc_cost(self, x_traj, u_traj):
@@ -77,6 +78,8 @@ class ArcTaskEnv:
         radial_distance_from_arc_center = radial_distance_from_arc_origin-self.radius
         radial_pos_cost = np.sum(tangential_velocity * (radial_distance_from_arc_center**2)) * self.dt
         
+        # variable to flag whether this trial left the channel or not
+        left_channel = np.max(radial_distance_from_arc_center) > self.width / 2
         #radial_distance_from_channel_center = np.linalg.norm(pos - arc_path, axis=1)
         #outside_channel = np.maximum(0, radial_deviation - self.width / 2)
         #cost1 = np.sum(outside_channel) * self.dt
@@ -100,7 +103,7 @@ class ArcTaskEnv:
         w_end_vel = .5
         w_accel = .001
         total_cost = w_radial_pos*radial_pos_cost + w_end_pos*end_pos_cost + w_end_vel*end_vel_cost + w_accel*accel_cost
-        return total_cost
+        return total_cost, left_channel
 
     def _nearest_point_on_arc(self, pos):
         """

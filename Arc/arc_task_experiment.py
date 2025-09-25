@@ -25,9 +25,9 @@ def run_simulation(n_trials=1000, seed=0):
 
     participant = TrajLearner(Ng=arc_env.Ng,
                                 init_goals=init_arc_goals,
-                                init_std=0.08,
-                                alpha=0.1,
-                                alpha_nu=0.1,
+                                init_std=0.1,
+                                alpha=0.02,
+                                alpha_nu=0.02,
                                 baseline_decay=.95,
                                 epsilon=0.1)
     
@@ -38,7 +38,8 @@ def run_simulation(n_trials=1000, seed=0):
         'rewards': np.zeros(n_trials),
         'stds': np.zeros((n_trials, 12)),
         'trajectories': np.zeros((n_trials, NT, 2)),
-        'radial_pos' : np.zeros((n_trials, NT))
+        'radial_pos' : np.zeros((n_trials, NT)),
+        'left_channel' : np.zeros(n_trials)
     }
     
     for trial in range(n_trials):
@@ -53,6 +54,7 @@ def run_simulation(n_trials=1000, seed=0):
         history['trajectories'][trial] = trajectory # x position
         #history['trajectories'][trial,:,1] = info['trajectory'][:,5] # y position
         history['stds'][trial] = participant.init_std * np.sqrt(np.exp(participant.nu))
+        history['left_channel'][trial] = info['left_channel']
 
         # compute radial position
         radial_pos = np.sqrt((arc_env.radius-trajectory[:,0])**2 + trajectory[:,1]**2)
@@ -76,19 +78,18 @@ def bin_data(array, bin_size=50):
 
 # %% run multiple simulations
 n_runs = 100
-n_trials = 1000
+n_trials = 1200
 bin_size = 50
 
 all_rewards = []
 all_dir_errors = []
-
 early_radial_dist = []
 late_radial_dist = []
-
 early_mean_trajs = []
 late_mean_trajs = []
-
 radial_pos_all_runs = []
+
+left_channel_all_binned = []
 
 time = []
 for run in range(n_runs):
@@ -102,7 +103,7 @@ for run in range(n_runs):
 
     radial_pos_all_runs.append(hist['radial_pos'])
 
-
+    left_channel_all_binned.append(bin_data(hist['left_channel'],bin_size=120)[0])
 
     time = .001 * np.arange(NT) # time vector for plotting later
 
@@ -142,3 +143,12 @@ plt.xlabel("time")
 plt.ylabel("radial position")
 plt.ylim(.25-.08, .25+.08)
 plt.legend()
+
+# %% plot average fraction in channel
+plt.figure(figsize=(3,3))
+plt.plot(1-np.mean(left_channel_all_binned, axis=0),'o-')
+plt.ylim(0.0,0.6)
+plt.xlabel('Block')
+plt.ylabel('Fraction in channel')
+plt.savefig('arc_success_rate.svg', format='svg', bbox_inches='tight')
+# %%

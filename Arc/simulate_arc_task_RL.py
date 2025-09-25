@@ -17,7 +17,7 @@ from traj_learner import TrajLearner
 from wrist_model import WristLDS
 from plotting import plot_arc_trials, ArcVisualizer
 
-np.random.seed(930)
+np.random.seed(1)
 
 # % initialize and check baseline behavior
 # create arc task environment
@@ -46,7 +46,7 @@ plot_arc_trials(arc_env, participant, n_trials=5)
 plt.savefig("initial_trajectories.svg", format="svg", bbox_inches='tight')
 
 # %% now learn improved policy
-n_trials = 1000
+n_trials = 1200
 
 history = {
     'actions': np.zeros((n_trials,2,6)),
@@ -56,7 +56,8 @@ history = {
     'trajectories': np.zeros((n_trials, NT, 2)),
     'radial_pos' : np.zeros((n_trials, NT)),
     'delta_mean' : np.zeros((n_trials, 12)),
-    'max_step_size' : np.zeros((n_trials))
+    'max_step_size' : np.zeros((n_trials)),
+    'left_channel' : np.zeros(n_trials)
 }
 
 
@@ -66,9 +67,6 @@ for trial in range(n_trials):
     # record mean and std of action distribution that action was sampled from
     history['means'][trial] = participant.init_std * participant.mean_norm
     history['stds'][trial] = participant.init_std * np.sqrt(np.exp(participant.nu))
-
-    if(trial==110):
-        a=1
 
     _, reward, _, info = arc_env.step(action)
     step, max_step_size = participant.update(action, reward)
@@ -80,7 +78,8 @@ for trial in range(n_trials):
     history['trajectories'][trial] = trajectory # x position
     history['delta_mean'][trial] = step # change in mean
     history['max_step_size'][trial] = max_step_size # maximum step size
-    
+    history['left_channel'][trial] = info['left_channel']
+
     # compute radial position
     radial_pos = np.sqrt((arc_env.radius-trajectory[:,0])**2 + trajectory[:,1]**2)
     history['radial_pos'][trial] = radial_pos
@@ -129,4 +128,9 @@ axs[1].set_xlabel("Trial")
 axs[1].legend()
 
 
-# %% 
+# %% plot learning curve in terms of staying in channel
+
+in_channel_binned = bin_data(1-history['left_channel'], bin_size=120)[0]
+plt.plot(in_channel_binned,'o-')
+
+# %%

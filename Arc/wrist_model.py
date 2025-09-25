@@ -10,17 +10,18 @@ import numpy as np
 from scipy.linalg import expm
 
 class WristLDS:
-    def __init__(self, dt):
+    def __init__(self, dt, sigma_u = 1000):
         self.T = 0.78            # total movement duration (s)
         self.horizon = 0.28     # time horizon for optimal control (s)
         self.dt = dt
         self.goal_dt = 0.13     # update interval for subgoals
         self.x_init = np.zeros(10)
         self.wQ = 1_000_000
+        self.sigma_u = sigma_u
 
         # System parameters
         m = 5     # mass
-        l = 10    # viscosity
+        l = 100    # viscosity
         k = 0     # stiffness
         tau1 = 0.05
         tau2 = 0.05
@@ -118,11 +119,11 @@ class WristLDS:
     
             for i in range(NT_sub):
                 L_t = self.L[:, :, i]
-                u = L_t @ x #+ .01 * np.random.normal(size=(1,2))
+                u = L_t @ x + self.sigma_u * np.random.normal(size=(1,2))
                 x_traj[sim_idx] = x
                 u_traj[sim_idx] = u
     
-                x = self.Ad @ x + self.Bd @ u
+                x = self.Ad @ x + self.Bd @ u[0]
                 sim_idx += 1
     
         x_traj[sim_idx] = x  # add final state
